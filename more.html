@@ -163,9 +163,9 @@
         const isConfig = window.intakeAuth.isConfigured();
         const dbStatusSpan = document.getElementById('moreDbStatus');
         if (isConfig) {
-          dbStatusSpan.innerHTML = '<span style="color:var(--sage-dark); font-weight:600;">✓ Connected to Cloud Supabase</span>';
+          dbStatusSpan.innerHTML = '<span style="color:var(--sage-dark); font-weight:600;">✓ Connected to Cloud Supabase (rzgwoubtuyrpmwsezhqw)</span>';
         } else {
-          dbStatusSpan.innerHTML = '<span style="color:var(--accent-dark); font-weight:600;">Demo / Local Storage Mode (configure supabase-config.js for cloud)</span>';
+          dbStatusSpan.innerHTML = '<span style="color:var(--accent-dark); font-weight:600;">Anon key setup needed for rzgwoubtuyrpmwsezhqw</span>';
         }
       } catch (e) {
         document.getElementById('moreUserEmail').textContent = 'Error loading user';

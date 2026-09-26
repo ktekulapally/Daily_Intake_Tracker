@@ -29,6 +29,25 @@
       <div class="rule"></div>
     </header>
 
+    <!-- SUPABASE KEY SETUP VIEW (IF ANON KEY NOT CONFIGURED YET) -->
+    <div id="setupSection" class="hidden">
+      <div class="auth-card">
+        <h2>Connect Supabase Project</h2>
+        <p class="sub" style="font-family:'IBM Plex Mono',monospace; font-size:12px;">https://rzgwoubtuyrpmwsezhqw.supabase.co</p>
+        <p style="font-size:13px; color:var(--ink-soft); line-height:1.5; margin-bottom:14px;">
+          Copy your <strong>anon public</strong> key from
+          <a href="https://supabase.com/dashboard/project/rzgwoubtuyrpmwsezhqw/settings/api" target="_blank" rel="noopener" style="color:var(--accent-dark); font-weight:600;">
+            Supabase Project Settings &rarr; API ↗
+          </a> and paste it below:
+        </p>
+        <form onsubmit="handleSaveAnonKey(event)">
+          <label for="anonKeyInput">Project Anon Public Key</label>
+          <input type="text" id="anonKeyInput" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." required autocomplete="off">
+          <button type="submit" class="btn-primary">Connect to Supabase</button>
+        </form>
+      </div>
+    </div>
+
     <!-- AUTHENTICATION VIEW -->
     <div id="authSection" class="hidden">
       <div class="auth-card">
@@ -347,16 +366,36 @@
       await checkAuthAndLoad();
     });
 
+    function handleSaveAnonKey(e) {
+      e.preventDefault();
+      const input = document.getElementById('anonKeyInput');
+      const val = (input ? input.value : '').trim();
+      if (val) {
+        localStorage.setItem('intake_supabase_anon_key', val);
+        window.location.reload();
+      }
+    }
+
     async function checkAuthAndLoad() {
+      const setupSec = document.getElementById('setupSection');
+      const authSec = document.getElementById('authSection');
+      const mainSec = document.getElementById('mainSection');
+      const fabBtn = document.getElementById('fabAddBtn');
+
+      if (!window.intakeAuth.isConfigured()) {
+        setupSec.classList.remove('hidden');
+        authSec.classList.add('hidden');
+        mainSec.classList.add('hidden');
+        fabBtn.classList.add('hidden');
+        return;
+      }
+      setupSec.classList.add('hidden');
+
       try {
         currentUser = await window.intakeAuth.getUser();
       } catch (err) {
         currentUser = null;
       }
-
-      const authSec = document.getElementById('authSection');
-      const mainSec = document.getElementById('mainSection');
-      const fabBtn = document.getElementById('fabAddBtn');
 
       if (!currentUser) {
         authSec.classList.remove('hidden');

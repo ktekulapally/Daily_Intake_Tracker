@@ -3,16 +3,16 @@
 // Connected to your live Supabase project
 // ============================================================================
 
-const SUPABASE_URL = (typeof localStorage !== 'undefined' && localStorage.getItem('intake_supabase_url')) || "https://zmklfmlppceiulaybjga.supabase.co";
-const SUPABASE_ANON_KEY = (typeof localStorage !== 'undefined' && localStorage.getItem('intake_supabase_anon_key')) || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpta2xmbWxwcGNlaXVsYXliamdhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMDE3MTQsImV4cCI6MjA5ODU3NzcxNH0.XIQPpuEE1QeEcdbubDxd28hfB4dhMbmNy0QIYWkzrGg";
+const SUPABASE_URL = (typeof localStorage !== 'undefined' && localStorage.getItem('intake_supabase_url')) || "https://rzgwoubtuyrpmwsezhqw.supabase.co";
+let SUPABASE_ANON_KEY = (typeof localStorage !== 'undefined' && localStorage.getItem('intake_supabase_anon_key')) || "";
 
 // Check whether live Supabase credentials have been configured
 const isSupabaseConfigured = () => {
   return (
     typeof SUPABASE_URL === 'string' &&
     typeof SUPABASE_ANON_KEY === 'string' &&
+    SUPABASE_ANON_KEY.length > 20 &&
     !SUPABASE_URL.includes("your-project-ref") &&
-    !SUPABASE_ANON_KEY.includes("your-anon-key") &&
     SUPABASE_URL.startsWith("https://")
   );
 };
