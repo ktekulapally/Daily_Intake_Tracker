@@ -1,10 +1,10 @@
 // ============================================================================
 // DAILY INTAKE TRACKER — Supabase Configuration & Data Bridge
-// Step 2 from README: Fill in your Supabase project URL and anon public key below.
+// Connected to your live Supabase project
 // ============================================================================
 
-const SUPABASE_URL = "https://your-project-ref.supabase.co";
-const SUPABASE_ANON_KEY = "your-anon-key";
+const SUPABASE_URL = (typeof localStorage !== 'undefined' && localStorage.getItem('intake_supabase_url')) || "https://zmklfmlppceiulaybjga.supabase.co";
+const SUPABASE_ANON_KEY = (typeof localStorage !== 'undefined' && localStorage.getItem('intake_supabase_anon_key')) || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpta2xmbWxwcGNlaXVsYXliamdhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMDE3MTQsImV4cCI6MjA5ODU3NzcxNH0.XIQPpuEE1QeEcdbubDxd28hfB4dhMbmNy0QIYWkzrGg";
 
 // Check whether live Supabase credentials have been configured
 const isSupabaseConfigured = () => {
@@ -22,17 +22,26 @@ let _supabaseClient = null;
 if (isSupabaseConfigured() && window.supabase && typeof window.supabase.createClient === 'function') {
   try {
     _supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.supabaseClient = _supabaseClient;
   } catch (err) {
     console.error("Failed to initialize Supabase client:", err);
   }
+}
+
+// Clear any stale local demo user when configured with real Supabase
+if (isSupabaseConfigured() && typeof localStorage !== 'undefined') {
+  try {
+    localStorage.removeItem('daily_intake_local_user_v1');
+  } catch (e) {}
 }
 
 // Local demo storage keys (used as fallback before Supabase setup)
 const LOCAL_STORAGE_KEY_RECORDS = 'daily_intake_local_records_v1';
 const LOCAL_STORAGE_KEY_USER = 'daily_intake_local_user_v1';
 
-// Seed sample records for immediate demo preview if running locally without Supabase
+// Seed sample records for immediate demo preview only if running without live Supabase
 const seedSampleDataIfNeeded = () => {
+  if (isSupabaseConfigured()) return;
   if (localStorage.getItem(LOCAL_STORAGE_KEY_RECORDS)) return;
 
   const today = new Date().toISOString().split('T')[0];

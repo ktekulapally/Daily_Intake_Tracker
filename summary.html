@@ -298,21 +298,21 @@
       }
 
       const rows = [
-        { label: 'Total Items Logged', value: totalItems },
-        { label: 'Main Meals Recorded', value: `${distinctMeals.length} (${distinctMeals.join(', ') || 'None'})` },
-        { label: 'Snacks Logged', value: snacks },
-        { label: 'Beverages Logged', value: beverages },
-        { label: 'New Foods Tried', value: newFoods },
-        { label: 'Packaged Foods', value: packaged },
-        { label: 'First Intake Time', value: firstTime },
-        { label: 'Last Intake Time', value: lastTime },
-        { label: 'Daily Intake Window', value: windowDuration }
+        { icon: '🍽️', label: 'Total Items Logged', value: totalItems },
+        { icon: '🍲', label: 'Main Meals Recorded', value: `${distinctMeals.length} (${distinctMeals.join(', ') || 'None'})` },
+        { icon: '🥪', label: 'Snacks Logged', value: snacks },
+        { icon: '🍵', label: 'Beverages Logged', value: beverages },
+        { icon: '✨', label: 'New Foods Tried', value: newFoods },
+        { icon: '📦', label: 'Packaged Foods', value: packaged },
+        { icon: '⏰', label: 'First Intake Time', value: firstTime },
+        { icon: '🌙', label: 'Last Intake Time', value: lastTime },
+        { icon: '⏳', label: 'Daily Intake Window', value: windowDuration }
       ];
 
       rows.forEach(row => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${row.label}</td>
+          <td><span style="margin-right:8px; font-size:15px;">${row.icon}</span><strong>${row.label}</strong></td>
           <td class="num" style="text-align: right;">${row.value}</td>
         `;
         tableBody.appendChild(tr);

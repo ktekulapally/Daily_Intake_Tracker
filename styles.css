@@ -83,9 +83,92 @@ button { cursor: pointer; border: none; border-radius: 8px; font-family: 'Inter'
 
 .summary-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
 .summary-row.secondary { grid-template-columns: repeat(2, 1fr); margin-bottom: 20px; }
-.stat-card { background: var(--card); border: 1px solid var(--paper-line); border-radius: 10px; padding: 12px 10px; text-align: center; }
-.stat-card .value { font-family: 'IBM Plex Mono', monospace; font-size: 21px; font-weight: 600; }
-.stat-card .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); font-weight: 600; margin-top: 2px; }
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--paper-line);
+  border-radius: 12px;
+  padding: 14px 10px;
+  text-align: center;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.stat-card .stat-icon {
+  font-size: 22px;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.stat-card .value {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.stat-card .label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+/* Distinct background colors and borders for each stat */
+.stat-card.card-items {
+  background: #f4efe6;
+  border-color: #dcd1be;
+  color: #3d2f24;
+}
+.stat-card.card-items .label {
+  color: #635041;
+}
+
+.stat-card.card-meals {
+  background: #ebf3ed;
+  border-color: #c4dcc8;
+  color: #1f4a28;
+}
+.stat-card.card-meals .label {
+  color: #356840;
+}
+
+.stat-card.card-snacks {
+  background: #fdf2e4;
+  border-color: #f7d6b8;
+  color: #944b15;
+}
+.stat-card.card-snacks .label {
+  color: #944b15;
+}
+
+.stat-card.card-beverages {
+  background: #e9f2f8;
+  border-color: #c2ddef;
+  color: #185275;
+}
+.stat-card.card-beverages .label {
+  color: #1d5f87;
+}
+
+.stat-card.card-new-foods {
+  background: #f2edf8;
+  border-color: #d8c9ee;
+  color: #58338f;
+}
+.stat-card.card-new-foods .label {
+  color: #65429c;
+}
+
+.stat-card.card-packaged {
+  background: #fbeee8;
+  border-color: #f2cbbe;
+  color: #91341e;
+}
+.stat-card.card-packaged .label {
+  color: #9c3c26;
+}
+
 
 .entry-card { background: var(--card); border: 1px solid var(--paper-line); border-radius: 12px; padding: 22px; margin-bottom: 20px; }
 .entry-card h3 { font-family: 'Fraunces', serif; font-size: 18px; margin: 0 0 16px; }
