@@ -234,6 +234,65 @@ footer.credit { text-align: center; font-size: 12px; color: var(--ink-soft); mar
   color: var(--ink);
 }
 
+/* ---- AI Advisor & Insights ---- */
+.period-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.period-toggle button {
+  background: var(--card);
+  border: 1px solid var(--paper-line);
+  color: var(--ink-soft);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.period-toggle button.active {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+.period-toggle button:hover:not(.active) {
+  background: #f1ebd8;
+  color: var(--ink);
+}
+
+.advice-box {
+  background: var(--card);
+  border: 1px solid var(--paper-line);
+  border-radius: 10px;
+  padding: 22px 24px;
+  line-height: 1.65;
+  font-size: 14.5px;
+  margin-top: 16px;
+}
+.advice-box h2, .advice-box h3, .advice-box h4 {
+  font-family: 'Fraunces', serif;
+  color: var(--ink);
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+.advice-box p { margin: 0 0 12px; }
+.advice-box ul, .advice-box ol { margin: 0 0 14px; padding-left: 22px; }
+.advice-box li { margin-bottom: 6px; }
+.advice-box strong { color: var(--accent-dark); }
+.advice-placeholder {
+  color: var(--ink-soft);
+  font-style: italic;
+  text-align: center;
+  padding: 36px 14px;
+  background: #fbf7ee;
+  border: 1px dashed var(--paper-line);
+  border-radius: 10px;
+  margin-top: 16px;
+}
+
+
 /* ---- Summary Report ---- */
 .report-card {
   background: var(--card);

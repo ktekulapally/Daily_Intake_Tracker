@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#c1694f">
+  <meta name="description" content="AI Nutrition Insights & Recommendations — macro balance and weekly dietary planning.">
+  <title>AI Insights — Daily Intake Tracker</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icons/favicon.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- Google Fonts: Fraunces, Inter, IBM Plex Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="session-guard.js"></script>
+</head>
+<body class="theme-insights">
+  <div class="app">
+    <header class="masthead">
+      <div class="eyebrow">DAILY INTAKE TRACKER</div>
+      <h1>AI Nutrition Advisor</h1>
+      <div class="rule"></div>
+    </header>
+
+    <div class="toolbar">
+      <div class="who">Signed in as <strong id="userEmailSpan">You</strong></div>
+      <div class="actions">
+        <button type="button" class="btn-ghost" onclick="openKeyModal()" id="apiKeyBtn" style="font-size:12px;">⚙️ AI Settings</button>
+      </div>
+    </div>
+
+    <!-- Main Analysis Container -->
+    <div class="entry-card">
+      <h3>Weekly Intake &amp; Macro Balance Analysis</h3>
+      <p style="color:var(--ink-soft); font-size:13.5px; margin-top:-6px; line-height:1.5;">
+        Synthesizes the food and drinks you've logged over the past week (or custom period) to evaluate your
+        <strong>protein vs. carbohydrate balance</strong>, plant diversity, and packaged food frequency,
+        and provides tailored recommendations for your upcoming week.
+      </p>
+
+      <!-- Period Toggle (Last 7 days, 14 days, 30 days) -->
+      <label style="margin-top:14px; margin-bottom:6px;">Select Analysis Period</label>
+      <div class="period-toggle" role="tablist">
+        <button type="button" data-period="7d" class="active" onclick="selectPeriod('7d', this)">Last 7 Days (1 Week)</button>
+        <button type="button" data-period="14d" onclick="selectPeriod('14d', this)">Last 14 Days (2 Weeks)</button>
+        <button type="button" data-period="30d" onclick="selectPeriod('30d', this)">Last 30 Days (1 Month)</button>
+      </div>
+
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px;">
+        <button type="button" class="btn-primary" style="width:auto;" id="analyzeBtn" onclick="runAnalysis()">
+          ✨ Analyze My Intake
+        </button>
+        <span id="engineBadge" style="font-size:11.5px; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace;">
+          Engine: Built-in Clinical Nutrition AI
+        </span>
+      </div>
+
+      <div id="adviceError" class="error-msg hidden" style="margin-top:16px;"></div>
+
+      <div style="margin-top: 18px;">
+        <div id="advicePlaceholder" class="advice-placeholder">
+          Click <strong>"Analyze My Intake"</strong> to review your food history, protein vs. carb mix, and recommendations for next week.
+        </div>
+
+        <div id="adviceLoading" class="advice-placeholder hidden">
+          <div style="font-size:22px; margin-bottom:8px;">🧠</div>
+          Examining your logged meals, categorizing protein and carb sources, and structuring your future week plan...
+        </div>
+
+        <div id="adviceBox" class="advice-box hidden"></div>
+      </div>
+
+      <div id="disclaimerBox" class="disclaimer hidden" style="margin-top:16px;">
+        <strong>Important:</strong> This is general, automatically generated information based on your own logged data — not medical or nutritional advice from a licensed dietitian. Use your own judgment for dietary decisions.
+      </div>
+    </div>
+
+    <!-- Macronutrient & Category Chart Card -->
+    <div id="chartCard" class="chart-card hidden">
+      <h4>Nutrient &amp; Category Distribution (Analyzed Period)</h4>
+      <div style="position: relative; height: 240px; width: 100%;">
+        <canvas id="macroChart"></canvas>
+      </div>
+    </div>
+
+    <!-- AI Settings Modal -->
+    <div id="keyModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+      <div class="modal-box" style="max-width: 420px;">
+        <h4>AI Engine Settings</h4>
+        <p style="margin-bottom:12px;">
+          The app includes a built-in nutrition intelligence engine that runs instantly with zero configuration. You can optionally connect your own Gemini or Groq API key for cloud LLM responses.
+        </p>
+
+        <label for="aiProviderSelect">AI Provider</label>
+        <select id="aiProviderSelect" onchange="onProviderChange()">
+          <option value="builtin">Built-in Clinical Nutrition Engine (Free &amp; Offline)</option>
+          <option value="gemini">Google Gemini API (gemini-1.5-flash / gemini-2.5)</option>
+          <option value="groq">Groq API (Llama 3.3 70B)</option>
+        </select>
+
+        <div id="apiKeyGroup" class="hidden">
+          <label for="apiKeyInput" id="apiKeyLabel">API Key</label>
+          <input type="password" id="apiKeyInput" placeholder="Paste your API key here">
+          <div style="font-size:11.5px; color:var(--ink-soft); margin-top:-8px; margin-bottom:12px;" id="apiKeyHint">
+            Key is stored locally in your browser.
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-ghost" onclick="closeKeyModal()">Cancel</button>
+          <button type="button" class="btn-secondary" onclick="saveKeySettings()">Save Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="credit">Daily Intake Tracker &bull; AI Nutrition Insights</footer>
+
+    <!-- Fixed Bottom Tab Bar -->
+    <nav class="bottom-tabs">
+      <a href="index.html" aria-label="Diary">
+        <span class="tab-icon">📖</span>
+        <span>Diary</span>
+      </a>
+      <a href="summary.html" aria-label="Summary">
+        <span class="tab-icon">📋</span>
+        <span>Summary</span>
+      </a>
+      <a href="history.html" aria-label="History">
+        <span class="tab-icon">📈</span>
+        <span>History</span>
+      </a>
+      <a href="insights.html" class="active" aria-label="AI Insights">
+        <span class="tab-icon">🧠</span>
+        <span>AI Insights</span>
+      </a>
+      <a href="more.html" aria-label="More">
+        <span class="tab-icon">⚙️</span>
+        <span>More</span>
+      </a>
+    </nav>
+  </div>
+
+  <script>
+    let selectedPeriod = '7d';
+    let macroChartInstance = null;
+
+    // Macro classification sets
+    const PROTEIN_KEYWORDS = [
+      'chicken', 'turkey', 'fish', 'salmon', 'tuna', 'shrimp', 'prawn', 'egg', 'eggs',
+      'tofu', 'paneer', 'lentil', 'lentils', 'dal', 'chickpea', 'chickpeas', 'beans',
+      'edamame', 'protein', 'beef', 'lamb', 'mutton', 'yogurt', 'curd', 'whey', 'quark',
+      'cottage cheese', 'pork', 'soya', 'soy'
+    ];
+
+    const CARB_KEYWORDS = [
+      'rice', 'brown rice', 'white rice', 'bread', 'sourdough', 'toast', 'oats', 'oatmeal',
+      'quinoa', 'pasta', 'spaghetti', 'noodle', 'noodles', 'potato', 'potatoes', 'sweet potato',
+      'roti', 'chapati', 'naan', 'corn', 'bagel', 'cereal', 'tortilla', 'wrap'
+    ];
+
+    const VEG_KEYWORDS = [
+      'salad', 'spinach', 'kale', 'broccoli', 'cauliflower', 'carrot', 'carrots', 'cucumber',
+      'lettuce', 'tomato', 'tomatoes', 'pepper', 'peppers', 'onion', 'zucchini', 'cabbage',
+      'asparagus', 'beans', 'vegetable', 'greens', 'mushrooms', 'sprouts'
+    ];
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const user = await window.intakeAuth.getUser();
+        if (user && user.email) {
+          document.getElementById('userEmailSpan').textContent = user.email;
+        }
+      } catch (e) {}
+
+      updateEngineBadge();
+    });
+
+    function selectPeriod(period, btn) {
+      document.querySelectorAll('.period-toggle button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedPeriod = period;
+    }
+
+    function updateEngineBadge() {
+      const provider = localStorage.getItem('daily_intake_ai_provider') || 'builtin';
+      const badge = document.getElementById('engineBadge');
+      if (provider === 'gemini') {
+        badge.textContent = 'Engine: Google Gemini Flash';
+      } else if (provider === 'groq') {
+        badge.textContent = 'Engine: Groq Llama 3.3';
+      } else {
+        badge.textContent = 'Engine: Built-in Clinical Nutrition AI';
+      }
+    }
+
+    function openKeyModal() {
+      const provider = localStorage.getItem('daily_intake_ai_provider') || 'builtin';
+      const key = localStorage.getItem('daily_intake_ai_key') || '';
+      document.getElementById('aiProviderSelect').value = provider;
+      document.getElementById('apiKeyInput').value = key;
+      onProviderChange();
+      document.getElementById('keyModal').classList.remove('hidden');
+    }
+
+    function closeKeyModal() {
+      document.getElementById('keyModal').classList.add('hidden');
+    }
+
+    function onProviderChange() {
+      const provider = document.getElementById('aiProviderSelect').value;
+      const group = document.getElementById('apiKeyGroup');
+      const label = document.getElementById('apiKeyLabel');
+      const hint = document.getElementById('apiKeyHint');
+
+      if (provider === 'builtin') {
+        group.classList.add('hidden');
+      } else {
+        group.classList.remove('hidden');
+        if (provider === 'gemini') {
+          label.textContent = 'Google Gemini API Key';
+          hint.textContent = 'Get a free key at aistudio.google.com';
+        } else {
+          label.textContent = 'Groq API Key';
+          hint.textContent = 'Get a free key at console.groq.com';
+        }
+      }
+    }
+
+    function saveKeySettings() {
+      const provider = document.getElementById('aiProviderSelect').value;
+      const key = document.getElementById('apiKeyInput').value.trim();
+      localStorage.setItem('daily_intake_ai_provider', provider);
+      localStorage.setItem('daily_intake_ai_key', key);
+      updateEngineBadge();
+      closeKeyModal();
+    }
+
+    async function runAnalysis() {
+      const btn = document.getElementById('analyzeBtn');
+      const errBox = document.getElementById('adviceError');
+      const placeholder = document.getElementById('advicePlaceholder');
+      const loading = document.getElementById('adviceLoading');
+      const adviceBox = document.getElementById('adviceBox');
+      const chartCard = document.getElementById('chartCard');
+      const disclaimer = document.getElementById('disclaimerBox');
+
+      errBox.classList.add('hidden');
+      placeholder.classList.add('hidden');
+      adviceBox.classList.add('hidden');
+      chartCard.classList.add('hidden');
+      disclaimer.classList.add('hidden');
+      loading.classList.remove('hidden');
+      btn.disabled = true;
+
+      try {
+        const days = selectedPeriod === '7d' ? 7 : (selectedPeriod === '14d' ? 14 : 30);
+        const endDate = new Date().toISOString().split('T')[0];
+        const startDate = new Date(Date.now() - (days - 1) * 86400000).toISOString().split('T')[0];
+
+        const records = await window.intakeDB.getItemsForDateRange(startDate, endDate);
+
+        if (!records || records.length === 0) {
+          throw new Error(`No food or drink entries logged in the past ${days} days. Log your meals in the Diary first to generate an analysis!`);
+        }
+
+        // Aggregate food intake metrics
+        const analysisData = summarizeIntake(records, days);
+
+        // Generate AI recommendations
+        let markdownOutput = '';
+        const provider = localStorage.getItem('daily_intake_ai_provider') || 'builtin';
+        const apiKey = localStorage.getItem('daily_intake_ai_key');
+
+        if (provider === 'gemini' && apiKey) {
+          markdownOutput = await callGeminiAPI(analysisData, apiKey);
+        } else if (provider === 'groq' && apiKey) {
+          markdownOutput = await callGroqAPI(analysisData, apiKey);
+        } else {
+          markdownOutput = generateNutritionalAdvice(analysisData);
+        }
+
+        // Render markdown
+        adviceBox.innerHTML = marked.parse(markdownOutput);
+        adviceBox.classList.remove('hidden');
+        disclaimer.classList.remove('hidden');
+
+        // Render Macro chart
+        renderMacroChart(analysisData.macroDistribution);
+        chartCard.classList.remove('hidden');
+
+      } catch (err) {
+        console.error('AI Analysis failed:', err);
+        errBox.textContent = err.message || String(err);
+        errBox.classList.remove('hidden');
+        placeholder.classList.remove('hidden');
+      } finally {
+        loading.classList.add('hidden');
+        btn.disabled = false;
+      }
+    }
+
+    function summarizeIntake(records, days) {
+      let proteinCount = 0;
+      let carbCount = 0;
+      let vegCount = 0;
+      let fruitCount = 0;
+      let dairyCount = 0;
+      let beverageCount = 0;
+      let snackSweetsCount = 0;
+
+      const proteinItems = [];
+      const carbItems = [];
+      const vegItems = [];
+      const mealCounts = { Breakfast: 0, 'Mid-Morning Snack': 0, Lunch: 0, 'Evening Snack': 0, Dinner: 0 };
+      const uniqueDays = new Set();
+      let packagedCount = 0;
+      let newFoodsCount = 0;
+
+      records.forEach(r => {
+        uniqueDays.add(r.intake_date);
+        if (mealCounts[r.meal_type] !== undefined) mealCounts[r.meal_type]++;
+        if (r.is_packaged_food) packagedCount++;
+        if (r.is_new_food) newFoodsCount++;
+
+        const name = (r.food_name || '').toLowerCase();
+        const cat = (r.category || '').toLowerCase();
+        const ing = (r.ingredients || '').toLowerCase();
+        const combined = `${name} ${cat} ${ing}`;
+
+        let classified = false;
+
+        // Check protein
+        if (['protein/meat', 'seafood', 'pulses/legumes'].includes(cat) || PROTEIN_KEYWORDS.some(k => combined.includes(k))) {
+          proteinCount++;
+          proteinItems.push(r.food_name);
+          classified = true;
+        }
+
+        // Check carbs
+        if (['rice/grains'].includes(cat) || CARB_KEYWORDS.some(k => combined.includes(k))) {
+          carbCount++;
+          carbItems.push(r.food_name);
+          classified = true;
+        }
+
+        // Check vegetables
+        if (cat.includes('vegetable') || VEG_KEYWORDS.some(k => combined.includes(k))) {
+          vegCount++;
+          vegItems.push(r.food_name);
+          classified = true;
+        }
+
+        // Check fruits
+        if (cat.includes('fruit')) {
+          fruitCount++;
+          classified = true;
+        }
+
+        // Check dairy
+        if (cat.includes('dairy') && !classified) {
+          dairyCount++;
+          classified = true;
+        }
+
+        // Check beverages
+        if (cat.includes('beverage')) {
+          beverageCount++;
+          classified = true;
+        }
+
+        // Sweets or snacks
+        if (cat.includes('sweet') || cat.includes('snack') || r.is_packaged_food) {
+          if (!classified) snackSweetsCount++;
+        }
+      });
+
+      return {
+        totalRecords: records.length,
+        daysTracked: uniqueDays.size,
+        periodDays: days,
+        proteinCount,
+        carbCount,
+        vegCount,
+        fruitCount,
+        dairyCount,
+        beverageCount,
+        snackSweetsCount,
+        packagedCount,
+        newFoodsCount,
+        proteinItems: Array.from(new Set(proteinItems)),
+        carbItems: Array.from(new Set(carbItems)),
+        vegItems: Array.from(new Set(vegItems)),
+        mealCounts,
+        macroDistribution: {
+          'Protein-Rich Foods': proteinCount,
+          'Carbohydrate-Rich Foods': carbCount,
+          'Vegetables & Fiber': vegCount,
+          'Fruits & Berries': fruitCount,
+          'Dairy & Healthy Fats': dairyCount,
+          'Beverages & Hydration': beverageCount,
+          'Snacks & Processed': snackSweetsCount
+        }
+      };
+    }
+
+    // Built-in intelligent nutritional advice generator
+    function generateNutritionalAdvice(data) {
+      const {
+        totalRecords, daysTracked, periodDays,
+        proteinCount, carbCount, vegCount, fruitCount,
+        packagedCount, newFoodsCount, proteinItems, carbItems, vegItems
+      } = data;
+
+      const carbToProteinRatio = proteinCount > 0 ? (carbCount / proteinCount).toFixed(1) : carbCount;
+      const isCarbHeavy = carbCount > proteinCount * 1.5;
+      const isProteinSparse = proteinCount < (daysTracked * 1.5);
+      const isVegLow = vegCount < (daysTracked * 1.5);
+      const packagedRatio = ((packagedCount / totalRecords) * 100).toFixed(0);
+
+      let summaryParagraph = `Over the past **${periodDays} days** (active across **${daysTracked} days**), you logged **${totalRecords} food & drink items**. `;
+      
+      let macroStatus = '';
+      if (isCarbHeavy) {
+        macroStatus = `Your intake leans **heavily towards carbohydrate-rich foods** (ratio of ~${carbToProteinRatio}:1 carbs to protein). While quality carbs provide vital cognitive and cellular energy, pairing them with adequate lean protein prevents rapid blood sugar spikes and sustains satiety.`;
+      } else if (proteinCount >= carbCount * 0.8) {
+        macroStatus = `Your intake shows a **robust and well-anchored protein profile** relative to carbohydrates (ratio of ~${carbToProteinRatio}:1). This supports muscle preservation, satiety, and steady glycemic levels throughout the day.`;
+      } else {
+        macroStatus = `Your macronutrient profile shows a **balanced moderate distribution** between carbohydrates and protein sources, offering a stable foundation for day-to-day energy.`;
+      }
+
+      const proteinListStr = proteinItems.slice(0, 5).join(', ') || 'Limited high-protein foods identified';
+      const carbListStr = carbItems.slice(0, 5).join(', ') || 'Grains and carbohydrates';
+      const vegListStr = vegItems.slice(0, 5).join(', ') || 'Mixed vegetables';
+
+      return `
+### 1. Weekly Intake & Food Category Review
+${summaryParagraph}
+- **Primary Protein Sources Logged:** ${proteinListStr}
+- **Primary Carbohydrate Sources Logged:** ${carbListStr}
+- **Vegetable & Fiber Diversity:** ${vegItems.length} distinct plant varieties recorded (${vegListStr})
+- **Packaged / Commercial Foods:** ${packagedCount} items (~${packagedRatio}% of total entries)
+- **New Foods Explored:** ${newFoodsCount} items marked as new taste explorations
+
+---
+
+### 2. Macronutrient Balance: Protein vs. Carbohydrates
+${macroStatus}
+
+- **Protein Intake Tally:** **${proteinCount} instances** (${(proteinCount / (daysTracked || 1)).toFixed(1)}/day). ${isProteinSparse ? '⚠️ *Below recommended frequency of 2-3 protein-centered meals daily.*' : '✅ *Consistent protein distribution across main meals.*'}
+- **Carbohydrate Tally:** **${carbCount} instances** (${(carbCount / (daysTracked || 1)).toFixed(1)}/day).
+- **Dietary Fiber & Greens:** **${vegCount + fruitCount} instances** of plant produce. ${isVegLow ? '⚠️ *Target increasing whole vegetables and leafy greens for gut microbiome health.*' : '✅ *Commendable plant and fiber intake.*'}
+
+---
+
+### 3. Actionable Recommendations for Next Week
+
+1. **Balance Every Main Carb with a Protein Partner:**
+   Whenever enjoying ${carbItems[0] || 'rice or bread'}, deliberately accompany it with 20–30g of protein (such as ${proteinItems[0] || 'eggs, lentils, chicken, or tofu'}). This slows gastric emptying and keeps your appetite steady for 3–4 hours.
+
+2. **Incorporate the "Plate Half-Rule" for Vegetables:**
+   ${isVegLow ? `Increase your fiber intake by aiming for at least half your lunch or dinner plate to be filled with non-starchy vegetables (spinach, broccoli, zucchini, peppers, or fresh crisp salads).` : `Continue your solid veggie intake and challenge yourself to introduce 1 new seasonal vegetable next week.`}
+
+3. **Mindful Packaged Food Swaps:**
+   ${packagedCount > 3 ? `Packaged items accounted for ${packagedRatio}% of your meals. Try replacing one commercial snack per day with raw nuts, unsweetened Greek yogurt with berries, or roasted chickpeas.` : `Great job keeping packaged foods minimal and emphasizing whole foods!`}
+
+4. **Hydration and Beverage Timing:**
+   Ensure non-caffeinated fluid intake (pure water or herbal infusions) occurs consistently between meals rather than chugging large volumes right before or during heavy meals to preserve digestive enzyme efficiency.
+
+---
+
+### 4. Suggested Blueprint for Your Upcoming Week
+- **Breakfast:** Pair complex carbs with steady protein (e.g. Eggs on whole-grain sourdough OR Oatmeal blended with Greek yogurt/seeds).
+- **Mid-Morning:** Hydration check (Water/Green tea) + optional handful of raw almonds or walnuts.
+- **Lunch:** Main protein (${proteinItems[1] || 'Salmon/Chicken/Tofu/Dal'}) + 1 generous cup of steamed or roasted vegetables + moderate complex grain (${carbItems[0] || 'brown rice or quinoa'}).
+- **Evening Snack:** Fresh seasonal fruit or crunchy vegetable sticks with hummus.
+- **Dinner:** Light, high-protein bowl or warm vegetable lentil soup with olive oil dressing.
+      `.trim();
+    }
+
+    // Optional Google Gemini API caller
+    async function callGeminiAPI(data, key) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+      const prompt = `
+You are a friendly, evidence-based nutritional consultant and dietitian reviewing a client's food & drink log over the past ${data.periodDays} days.
+Client Log Data:
+- Days actively tracked: ${data.daysTracked} out of ${data.periodDays} days
+- Total items logged: ${data.totalRecords}
+- Protein-rich items logged (${data.proteinCount}): ${data.proteinItems.join(', ')}
+- Carb-rich items logged (${data.carbCount}): ${data.carbItems.join(', ')}
+- Vegetable & fruit items logged: ${data.vegCount} vegetables, ${data.fruitCount} fruits (${data.vegItems.join(', ')})
+- Packaged foods tally: ${data.packagedCount}
+- New foods tried: ${data.newFoodsCount}
+
+Please provide:
+1. "Weekly Intake Review": Concise synthesis of what kind of food they have taken over the week.
+2. "Macro Balance: Protein vs. Carbohydrate Breakdown": Detailed assessment of whether they are eating protein-rich vs. carb-rich foods and how balanced it is.
+3. "Practical Recommendations for Next Week": 3-4 specific, encouraging, actionable adjustments for the upcoming week.
+4. "Suggested Meal Blueprint for Next Week": A practical meal outline.
+
+Format the response in clean, beautiful Markdown with headers, bullet points, and bold text. Keep it empathetic, practical, and grounded.
+      `;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      });
+
+      const resJson = await response.json();
+      if (!response.ok || resJson.error) {
+        throw new Error(resJson.error?.message || 'Gemini API call failed.');
+      }
+
+      return resJson.candidates?.[0]?.content?.parts?.[0]?.text || 'No response returned from Gemini.';
+    }
+
+    // Optional Groq API caller
+    async function callGroqAPI(data, key) {
+      const url = 'https://api.groq.com/openai/v1/chat/completions';
+      const prompt = `
+You are an evidence-based clinical nutrition consultant reviewing a user's food log for the past ${data.periodDays} days:
+- Logged items: ${data.totalRecords}
+- Protein foods (${data.proteinCount}): ${data.proteinItems.join(', ')}
+- Carb foods (${data.carbCount}): ${data.carbItems.join(', ')}
+- Vegetables & greens: ${data.vegItems.join(', ')}
+- Packaged items: ${data.packagedCount}
+
+Provide:
+1. Weekly Intake Review
+2. Protein vs Carb Macro Analysis
+3. Targeted Recommendations for Next Week
+4. Meal Blueprint for the Upcoming Week
+
+Respond in Markdown with clear headers and bullet points.
+      `;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const resJson = await response.json();
+      if (!response.ok || resJson.error) {
+        throw new Error(resJson.error?.message || 'Groq API call failed.');
+      }
+
+      return resJson.choices?.[0]?.message?.content || 'No response returned from Groq.';
+    }
+
+    function renderMacroChart(macroDist) {
+      const ctx = document.getElementById('macroChart').getContext('2d');
+      if (macroChartInstance) macroChartInstance.destroy();
+
+      const labels = Object.keys(macroDist);
+      const data = Object.values(macroDist);
+      const colors = ['#c1694f', '#d4a373', '#6b8f71', '#e76f51', '#e9c46a', '#457b9d', '#8f6529'];
+
+      macroChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: colors,
+            borderWidth: 2,
+            borderColor: '#fffdf8'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { boxWidth: 10, font: { size: 11 } }
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
