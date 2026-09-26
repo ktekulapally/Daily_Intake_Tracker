@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#c1694f">
+  <meta name="description" content="Personal food & drink diary — log what you eat, see it grouped by meal, track simple stats.">
+  <title>Diary — Daily Intake Tracker</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icons/favicon.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- Google Fonts: Fraunces, Inter, IBM Plex Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="session-guard.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="masthead">
+      <div class="eyebrow">DAILY INTAKE TRACKER</div>
+      <h1>Food &amp; Drink Diary</h1>
+      <div class="rule"></div>
+    </header>
+
+    <!-- AUTHENTICATION VIEW -->
+    <div id="authSection" class="hidden">
+      <div class="auth-card">
+        <h2 id="authHeading">Sign In</h2>
+        <p class="sub" id="authSub">Access your private personal intake diary</p>
+
+        <div id="authAlert" class="hidden"></div>
+
+        <form id="authForm" onsubmit="handleAuthSubmit(event)">
+          <label for="authEmail">Email Address</label>
+          <input type="email" id="authEmail" required placeholder="you@example.com" autocomplete="email">
+
+          <label for="authPassword">Password</label>
+          <input type="password" id="authPassword" required placeholder="••••••••" autocomplete="current-password">
+
+          <button type="submit" id="authSubmitBtn" class="btn-primary">Sign In</button>
+        </form>
+
+        <div class="auth-toggle">
+          <span id="authToggleText">Need an account?</span>
+          <a onclick="toggleAuthMode()" id="authToggleLink">Sign up</a>
+        </div>
+
+        <div style="text-align: center; margin-top: 14px;">
+          <button type="button" class="btn-link" onclick="handleForgotPassword()">Forgot password?</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN DIARY CONTENT (AUTHENTICATED) -->
+    <div id="mainSection" class="hidden">
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="who">
+          Logged in as <strong id="userEmailSpan"></strong>
+          <span id="demoModeBadge" class="demo-badge hidden">Demo / Local</span>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn-ghost" onclick="handleSignOut()">Sign Out</button>
+        </div>
+      </div>
+
+      <!-- Demo Notification Notice if not connected to live Supabase -->
+      <div id="configNotice" class="notice-box hidden">
+        <strong>Demo Mode Active:</strong> Supabase credentials are using defaults. Data is being stored locally in your browser so you can test all features immediately. Run <code>supabase-schema.sql</code> and update <code>supabase-config.js</code> when ready for cloud sync.
+      </div>
+
+      <!-- Date Navigator -->
+      <div class="date-nav">
+        <button type="button" onclick="navigateDate(-1)" aria-label="Previous Day">‹</button>
+        <div class="date-label" id="currentDateLabel">Today</div>
+        <button type="button" onclick="navigateDate(1)" aria-label="Next Day">›</button>
+        <input type="date" id="datePickerInput" onchange="onDatePickerChange(this.value)" aria-label="Pick date">
+      </div>
+
+      <!-- Daily Stats Row (Items / Meals / Snacks / Beverages) -->
+      <div class="summary-row">
+        <div class="stat-card">
+          <div class="value" id="statItems">0</div>
+          <div class="label">Items</div>
+        </div>
+        <div class="stat-card">
+          <div class="value" id="statMeals">0</div>
+          <div class="label">Meals</div>
+        </div>
+        <div class="stat-card">
+          <div class="value" id="statSnacks">0</div>
+          <div class="label">Snacks</div>
+        </div>
+        <div class="stat-card">
+          <div class="value" id="statBeverages">0</div>
+          <div class="label">Beverages</div>
+        </div>
+      </div>
+
+      <!-- Secondary Stats Row (New Foods / Packaged Foods) -->
+      <div class="summary-row secondary">
+        <div class="stat-card">
+          <div class="value" id="statNewFoods">0</div>
+          <div class="label">New Foods Tried</div>
+        </div>
+        <div class="stat-card">
+          <div class="value" id="statPackaged">0</div>
+          <div class="label">Packaged Foods</div>
+        </div>
+      </div>
+
+      <!-- Add / Edit Entry Card (Modal / Form) -->
+      <div id="entryFormCard" class="entry-card hidden">
+        <h3 id="formTitle">Log an Item</h3>
+        <form id="entryForm" onsubmit="handleSaveEntry(event)">
+          <input type="hidden" id="entryId">
+
+          <div class="entry-grid">
+            <div>
+              <label for="entryDate">Date</label>
+              <input type="date" id="entryDate" required>
+            </div>
+            <div>
+              <label for="entryTime">Time</label>
+              <input type="time" id="entryTime" required>
+            </div>
+
+            <div>
+              <label for="entryMealType">Meal Type</label>
+              <select id="entryMealType" required>
+                <option value="Breakfast">Breakfast</option>
+                <option value="Mid-Morning Snack">Mid-Morning Snack</option>
+                <option value="Lunch">Lunch</option>
+                <option value="Evening Snack">Evening Snack</option>
+                <option value="Dinner">Dinner</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="entryCategory">Category</label>
+              <select id="entryCategory" required>
+                <option value="Rice/Grains">Rice/Grains</option>
+                <option value="Dairy">Dairy</option>
+                <option value="Vegetables">Vegetables</option>
+                <option value="Fruits">Fruits</option>
+                <option value="Protein/Meat">Protein/Meat</option>
+                <option value="Seafood">Seafood</option>
+                <option value="Pulses/Legumes">Pulses/Legumes</option>
+                <option value="Snacks">Snacks</option>
+                <option value="Beverages">Beverages</option>
+                <option value="Sweets/Desserts">Sweets/Desserts</option>
+                <option value="Condiments/Spices">Condiments/Spices</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div class="full">
+              <label for="entryFoodName">Food / Drink Name</label>
+              <input type="text" id="entryFoodName" required placeholder="e.g. Oatmeal with Almond Milk, Black Coffee">
+            </div>
+
+            <div>
+              <label for="entryQuantity">Quantity</label>
+              <input type="number" id="entryQuantity" step="any" min="0.01" required placeholder="1">
+            </div>
+
+            <div>
+              <label for="entryUnit">Unit</label>
+              <select id="entryUnit" required>
+                <option value="Pieces">Pieces</option>
+                <option value="Bowl">Bowl</option>
+                <option value="Cup">Cup</option>
+                <option value="Plate">Plate</option>
+                <option value="Slice">Slice</option>
+                <option value="g">g (Grams)</option>
+                <option value="ml">ml (Milliliters)</option>
+                <option value="tbsp">tbsp</option>
+                <option value="tsp">tsp</option>
+                <option value="Serving">Serving</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div class="full">
+              <label for="entryIngredients">Ingredients</label>
+              <input type="text" id="entryIngredients" placeholder="e.g. Oats, almond milk, blueberries, chia seeds">
+            </div>
+
+            <div>
+              <label for="entryPreparation">Preparation Method</label>
+              <select id="entryPreparation">
+                <option value="Raw">Raw</option>
+                <option value="Boiled">Boiled</option>
+                <option value="Steamed">Steamed</option>
+                <option value="Grilled">Grilled</option>
+                <option value="Baked">Baked</option>
+                <option value="Roasted">Roasted</option>
+                <option value="Stir-fried">Stir-fried</option>
+                <option value="Fried">Fried</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="entryBrand">Brand / Restaurant</label>
+              <input type="text" id="entryBrand" placeholder="e.g. Home Cooked, Chobani">
+            </div>
+
+            <div class="full">
+              <label for="entryNotes">Notes</label>
+              <textarea id="entryNotes" placeholder="Any sensations, recipe notes, or observations..."></textarea>
+            </div>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="entryIsPackaged">
+            <label for="entryIsPackaged">Packaged Food (commercial store-bought item)</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="entryIsNewFood">
+            <label for="entryIsNewFood">First time trying this (New Food)</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="entryPreviouslyConsumed" checked>
+            <label for="entryPreviouslyConsumed">Previously consumed in normal diet</label>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary" id="saveEntryBtn">Save Entry</button>
+            <button type="button" class="btn-ghost" onclick="closeEntryForm()">Cancel</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Meal-Grouped Timeline -->
+      <div id="timelineContainer">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="disclaimer">
+        Important: The stats and trends this app shows (item counts, timing, category mix, "new foods" tally) are simple tracking statistics for your own awareness — not a medical or nutritional assessment.
+      </div>
+      <footer class="credit">Daily Intake Tracker &bull; Personal Diary</footer>
+    </div>
+
+    <!-- Floating Action Button (+) -->
+    <button class="fab" id="fabAddBtn" onclick="openAddEntryForm()" aria-label="Add Food Item" title="Log an Item">+</button>
+
+    <!-- Custom Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <h4>Delete Entry</h4>
+        <p>Are you sure you want to delete this food entry? This action cannot be undone.</p>
+        <div class="modal-actions">
+          <button type="button" class="btn-ghost" onclick="closeDeleteModal()">Cancel</button>
+          <button type="button" class="btn-secondary" id="confirmDeleteBtn" onclick="executeDelete()">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fixed Bottom Tab Bar -->
+    <nav class="bottom-tabs">
+      <a href="index.html" class="active" aria-label="Diary">
+        <span class="tab-icon">📖</span>
+        <span>Diary</span>
+      </a>
+      <a href="summary.html" aria-label="Summary">
+        <span class="tab-icon">📋</span>
+        <span>Summary</span>
+      </a>
+      <a href="history.html" aria-label="History">
+        <span class="tab-icon">📈</span>
+        <span>History</span>
+      </a>
+      <a href="more.html" aria-label="More">
+        <span class="tab-icon">⚙️</span>
+        <span>More</span>
+      </a>
+    </nav>
+  </div>
+
+  <script>
+    // State
+    let currentUser = null;
+    let authIsSignUp = false;
+    let selectedDate = new Date().toISOString().split('T')[0];
+    let currentDayRecords = [];
+    let pendingDeleteId = null;
+
+    // Ordered meal groups
+    const MEAL_ORDER = [
+      'Breakfast',
+      'Mid-Morning Snack',
+      'Lunch',
+      'Evening Snack',
+      'Dinner',
+      'Other'
+    ];
+
+    // Format date string for display (e.g., "Today, Sep 26" or "Wed, Sep 24, 2026")
+    function formatDisplayDate(dateStr) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+      const parts = dateStr.split('-');
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      const opts = { month: 'short', day: 'numeric', weekday: 'short' };
+      const formatted = d.toLocaleDateString(undefined, opts);
+
+      if (dateStr === todayStr) return `Today, ${formatted}`;
+      if (dateStr === yesterday) return `Yesterday, ${formatted}`;
+      if (dateStr === tomorrow) return `Tomorrow, ${formatted}`;
+      return formatted;
+    }
+
+    // Lifecycle
+    window.addEventListener('DOMContentLoaded', async () => {
+      // Check query params (e.g., jump to a specific date from History or reason=idle_timeout)
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('date')) {
+        selectedDate = params.get('date');
+      }
+      if (params.get('reason') === 'idle_timeout') {
+        showAuthAlert("You were signed out after 1 hour of inactivity.", false);
+      }
+
+      await checkAuthAndLoad();
+    });
+
+    async function checkAuthAndLoad() {
+      try {
+        currentUser = await window.intakeAuth.getUser();
+      } catch (err) {
+        currentUser = null;
+      }
+
+      const authSec = document.getElementById('authSection');
+      const mainSec = document.getElementById('mainSection');
+      const fabBtn = document.getElementById('fabAddBtn');
+
+      if (!currentUser) {
+        authSec.classList.remove('hidden');
+        mainSec.classList.add('hidden');
+        fabBtn.classList.add('hidden');
+        return;
+      }
+
+      authSec.classList.add('hidden');
+      mainSec.classList.remove('hidden');
+      fabBtn.classList.remove('hidden');
+
+      document.getElementById('userEmailSpan').textContent = currentUser.email || 'You';
+      if (!window.intakeDB.isConfigured()) {
+        document.getElementById('demoModeBadge').classList.remove('hidden');
+        document.getElementById('configNotice').classList.remove('hidden');
+      } else {
+        document.getElementById('demoModeBadge').classList.add('hidden');
+        document.getElementById('configNotice').classList.add('hidden');
+      }
+
+      updateDateDisplay();
+      await loadRecordsForCurrentDate();
+    }
+
+    // Auth toggles & handlers
+    function toggleAuthMode() {
+      authIsSignUp = !authIsSignUp;
+      const heading = document.getElementById('authHeading');
+      const sub = document.getElementById('authSub');
+      const submitBtn = document.getElementById('authSubmitBtn');
+      const toggleText = document.getElementById('authToggleText');
+      const toggleLink = document.getElementById('authToggleLink');
+      const alertBox = document.getElementById('authAlert');
+      alertBox.classList.add('hidden');
+
+      if (authIsSignUp) {
+        heading.textContent = 'Create Account';
+        sub.textContent = 'Start tracking your daily food and drink intake';
+        submitBtn.textContent = 'Sign Up';
+        toggleText.textContent = 'Already have an account?';
+        toggleLink.textContent = 'Sign in';
+      } else {
+        heading.textContent = 'Sign In';
+        sub.textContent = 'Access your private personal intake diary';
+        submitBtn.textContent = 'Sign In';
+        toggleText.textContent = 'Need an account?';
+        toggleLink.textContent = 'Sign up';
+      }
+    }
+
+    async function handleAuthSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const submitBtn = document.getElementById('authSubmitBtn');
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Processing...';
+
+      try {
+        if (authIsSignUp) {
+          await window.intakeAuth.signUp(email, password);
+          showAuthAlert("Account created successfully! Signing you in...", false);
+        } else {
+          await window.intakeAuth.signIn(email, password);
+        }
+        await checkAuthAndLoad();
+      } catch (err) {
+        showAuthAlert(err.message || 'Authentication failed. Please check your credentials.', true);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = authIsSignUp ? 'Sign Up' : 'Sign In';
+      }
+    }
+
+    async function handleForgotPassword() {
+      const email = document.getElementById('authEmail').value.trim();
+      if (!email) {
+        showAuthAlert("Please enter your email above to receive a reset link.", true);
+        return;
+      }
+      try {
+        await window.intakeAuth.resetPassword(email);
+        showAuthAlert("Password reset link sent! Check your inbox.", false);
+      } catch (err) {
+        showAuthAlert(err.message || "Failed to send reset email.", true);
+      }
+    }
+
+    async function handleSignOut() {
+      await window.intakeAuth.signOut();
+      window.location.reload();
+    }
+
+    function showAuthAlert(msg, isError) {
+      const alertBox = document.getElementById('authAlert');
+      alertBox.textContent = msg;
+      alertBox.className = isError ? 'error-msg' : 'info-msg';
+      alertBox.classList.remove('hidden');
+    }
+
+    // Date Navigation
+    function updateDateDisplay() {
+      document.getElementById('currentDateLabel').textContent = formatDisplayDate(selectedDate);
+      document.getElementById('datePickerInput').value = selectedDate;
+    }
+
+    function navigateDate(days) {
+      const parts = selectedDate.split('-');
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      d.setDate(d.getDate() + days);
+      selectedDate = d.toISOString().split('T')[0];
+      updateDateDisplay();
+      loadRecordsForCurrentDate();
+    }
+
+    function onDatePickerChange(val) {
+      if (!val) return;
+      selectedDate = val;
+      updateDateDisplay();
+      loadRecordsForCurrentDate();
+    }
+
+    // Load and render records
+    async function loadRecordsForCurrentDate() {
+      const container = document.getElementById('timelineContainer');
+      container.innerHTML = '<div style="text-align:center; padding:30px; color:var(--ink-soft);">Loading diary entries...</div>';
+
+      try {
+        currentDayRecords = await window.intakeDB.getItemsForDate(selectedDate);
+        renderStats();
+        renderTimeline();
+      } catch (err) {
+        console.error('Error fetching records:', err);
+        container.innerHTML = `<div class="error-msg">Failed to load entries: ${err.message}</div>`;
+      }
+    }
+
+    function renderStats() {
+      const items = currentDayRecords.length;
+      
+      // Meals = count of distinct main meal types (Breakfast / Lunch / Dinner)
+      const distinctMeals = new Set(
+        currentDayRecords
+          .map(r => r.meal_type)
+          .filter(m => ['Breakfast', 'Lunch', 'Dinner'].includes(m))
+      );
+      const meals = distinctMeals.size;
+
+      // Snacks = count of entries logged as snacks
+      const snacks = currentDayRecords.filter(r => 
+        r.meal_type === 'Mid-Morning Snack' || r.meal_type === 'Evening Snack'
+      ).length;
+
+      // Beverages = category === 'Beverages'
+      const beverages = currentDayRecords.filter(r => r.category === 'Beverages').length;
+
+      // New foods tally
+      const newFoods = currentDayRecords.filter(r => r.is_new_food).length;
+
+      // Packaged foods tally
+      const packaged = currentDayRecords.filter(r => r.is_packaged_food).length;
+
+      document.getElementById('statItems').textContent = items;
+      document.getElementById('statMeals').textContent = meals;
+      document.getElementById('statSnacks').textContent = snacks;
+      document.getElementById('statBeverages').textContent = beverages;
+      document.getElementById('statNewFoods').textContent = newFoods;
+      document.getElementById('statPackaged').textContent = packaged;
+    }
+
+    function renderTimeline() {
+      const container = document.getElementById('timelineContainer');
+      container.innerHTML = '';
+
+      if (currentDayRecords.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            No food or drink entries logged for ${formatDisplayDate(selectedDate)}.<br>
+            Tap the <strong>+</strong> button below to log your meal.
+          </div>
+        `;
+        return;
+      }
+
+      // Group records by meal_type
+      const grouped = {};
+      currentDayRecords.forEach(r => {
+        const meal = r.meal_type || 'Other';
+        if (!grouped[meal]) grouped[meal] = [];
+        grouped[meal].push(r);
+      });
+
+      // Render groups in designated meal order
+      MEAL_ORDER.forEach(meal => {
+        const records = grouped[meal];
+        if (!records || records.length === 0) return;
+
+        // Earliest intake time in this meal
+        const times = records.map(r => r.intake_time).filter(Boolean);
+        const displayTime = times.length > 0 ? times[0].slice(0, 5) : '';
+
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'timeline-group';
+
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'meal-header';
+        headerDiv.innerHTML = `
+          <div class="meal-dot"></div>
+          <div class="meal-name">${escapeHtml(meal)}</div>
+          ${displayTime ? `<div class="meal-time">${displayTime}</div>` : ''}
+        `;
+        groupDiv.appendChild(headerDiv);
+
+        records.forEach(item => {
+          const row = document.createElement('div');
+          row.className = 'food-row';
+
+          // Meta string: quantity unit · category · brand/prep
+          const metaParts = [];
+          if (item.quantity && item.unit) metaParts.push(`${item.quantity} ${item.unit}`);
+          if (item.category) metaParts.push(item.category);
+          if (item.preparation_method && item.preparation_method !== 'Other') metaParts.push(item.preparation_method);
+          if (item.brand_restaurant) metaParts.push(item.brand_restaurant);
+          const metaText = metaParts.join(' &bull; ');
+
+          const badgesHtml = `
+            <div class="badges">
+              ${item.is_new_food ? '<span class="badge new">New</span>' : ''}
+              ${item.is_packaged_food ? '<span class="badge packaged">Packaged</span>' : ''}
+            </div>
+          `;
+
+          row.innerHTML = `
+            <div class="info">
+              <div class="food-name">${escapeHtml(item.food_name)}</div>
+              <div class="food-meta">${metaText}</div>
+              ${item.notes ? `<div class="food-meta" style="font-style: italic; color: var(--ink);">“${escapeHtml(item.notes)}”</div>` : ''}
+            </div>
+            ${badgesHtml}
+            <div class="row-actions">
+              <button type="button" class="icon-btn" onclick="openEditEntryForm('${item.id}')" title="Edit entry" aria-label="Edit entry">✏️</button>
+              <button type="button" class="icon-btn danger" onclick="confirmDeleteEntry('${item.id}')" title="Delete entry" aria-label="Delete entry">🗑️</button>
+            </div>
+          `;
+          groupDiv.appendChild(row);
+        });
+
+        container.appendChild(groupDiv);
+      });
+    }
+
+    // Add / Edit Entry form handlers
+    function openAddEntryForm() {
+      document.getElementById('formTitle').textContent = 'Log an Item';
+      document.getElementById('entryId').value = '';
+      document.getElementById('entryForm').reset();
+
+      // Default date to current view date
+      document.getElementById('entryDate').value = selectedDate;
+      // Default time to current time HH:MM
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const mins = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('entryTime').value = `${hours}:${mins}`;
+
+      document.getElementById('entryQuantity').value = 1;
+      document.getElementById('entryUnit').value = 'Bowl';
+      document.getElementById('entryPreparation').value = 'Raw';
+      document.getElementById('entryPreviouslyConsumed').checked = true;
+
+      const card = document.getElementById('entryFormCard');
+      card.classList.remove('hidden');
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('entryFoodName').focus();
+    }
+
+    function openEditEntryForm(id) {
+      const record = currentDayRecords.find(r => r.id === id);
+      if (!record) return;
+
+      document.getElementById('formTitle').textContent = 'Edit Item';
+      document.getElementById('entryId').value = record.id;
+      document.getElementById('entryDate').value = record.intake_date;
+      document.getElementById('entryTime').value = record.intake_time ? record.intake_time.slice(0, 5) : '';
+      document.getElementById('entryMealType').value = record.meal_type || 'Breakfast';
+      document.getElementById('entryCategory').value = record.category || 'Rice/Grains';
+      document.getElementById('entryFoodName').value = record.food_name || '';
+      document.getElementById('entryQuantity').value = record.quantity || 1;
+      document.getElementById('entryUnit').value = record.unit || 'Pieces';
+      document.getElementById('entryIngredients').value = record.ingredients || '';
+      document.getElementById('entryPreparation').value = record.preparation_method || 'Boiled';
+      document.getElementById('entryBrand').value = record.brand_restaurant || '';
+      document.getElementById('entryNotes').value = record.notes || '';
+      document.getElementById('entryIsPackaged').checked = Boolean(record.is_packaged_food);
+      document.getElementById('entryIsNewFood').checked = Boolean(record.is_new_food);
+      document.getElementById('entryPreviouslyConsumed').checked = Boolean(record.previously_consumed);
+
+      const card = document.getElementById('entryFormCard');
+      card.classList.remove('hidden');
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function closeEntryForm() {
+      document.getElementById('entryFormCard').classList.add('hidden');
+    }
+
+    async function handleSaveEntry(e) {
+      e.preventDefault();
+      const saveBtn = document.getElementById('saveEntryBtn');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      const id = document.getElementById('entryId').value;
+      const recordData = {
+        intake_date: document.getElementById('entryDate').value,
+        intake_time: document.getElementById('entryTime').value,
+        meal_type: document.getElementById('entryMealType').value,
+        category: document.getElementById('entryCategory').value,
+        food_name: document.getElementById('entryFoodName').value.trim(),
+        quantity: parseFloat(document.getElementById('entryQuantity').value) || 1,
+        unit: document.getElementById('entryUnit').value,
+        ingredients: document.getElementById('entryIngredients').value.trim(),
+        preparation_method: document.getElementById('entryPreparation').value,
+        brand_restaurant: document.getElementById('entryBrand').value.trim(),
+        notes: document.getElementById('entryNotes').value.trim(),
+        is_packaged_food: document.getElementById('entryIsPackaged').checked,
+        is_new_food: document.getElementById('entryIsNewFood').checked,
+        previously_consumed: document.getElementById('entryPreviouslyConsumed').checked
+      };
+
+      try {
+        if (id) {
+          await window.intakeDB.updateItem(id, recordData);
+        } else {
+          await window.intakeDB.insertItem(recordData);
+        }
+
+        closeEntryForm();
+        // If entry was saved to a different date, switch view to that date
+        if (recordData.intake_date !== selectedDate) {
+          selectedDate = recordData.intake_date;
+          updateDateDisplay();
+        }
+        await loadRecordsForCurrentDate();
+      } catch (err) {
+        alert('Failed to save entry: ' + (err.message || err));
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Entry';
+      }
+    }
+
+    // Delete confirmation handlers
+    function confirmDeleteEntry(id) {
+      pendingDeleteId = id;
+      document.getElementById('deleteModal').classList.remove('hidden');
+    }
+
+    function closeDeleteModal() {
+      pendingDeleteId = null;
+      document.getElementById('deleteModal').classList.add('hidden');
+    }
+
+    async function executeDelete() {
+      if (!pendingDeleteId) return;
+      const btn = document.getElementById('confirmDeleteBtn');
+      btn.disabled = true;
+      btn.textContent = 'Deleting...';
+
+      try {
+        await window.intakeDB.deleteItem(pendingDeleteId);
+        closeDeleteModal();
+        await loadRecordsForCurrentDate();
+      } catch (err) {
+        alert('Failed to delete item: ' + (err.message || err));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Delete';
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/[&<>"']/g, m => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[m]));
+    }
+  </script>
+</body>
+</html>

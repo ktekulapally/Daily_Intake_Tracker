@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#c1694f">
+  <meta name="description" content="Intake Trends and History — 14/30/90-day charts and past logs.">
+  <title>History — Daily Intake Tracker</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icons/favicon.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- Google Fonts: Fraunces, Inter, IBM Plex Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="session-guard.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="masthead">
+      <div class="eyebrow">DAILY INTAKE TRACKER</div>
+      <h1>Trends &amp; History</h1>
+      <div class="rule"></div>
+    </header>
+
+    <!-- Range Selector Pills -->
+    <div style="text-align: center; margin-bottom: 20px;">
+      <div class="pill-group" role="tablist" aria-label="Select history range">
+        <button type="button" class="pill-btn active" id="pill14" onclick="setRange(14)">14 Days</button>
+        <button type="button" class="pill-btn" id="pill30" onclick="setRange(30)">30 Days</button>
+        <button type="button" class="pill-btn" id="pill90" onclick="setRange(90)">90 Days</button>
+      </div>
+    </div>
+
+    <!-- Range Overview Stats Row -->
+    <div class="summary-row">
+      <div class="stat-card">
+        <div class="value" id="rangeTotalItems">0</div>
+        <div class="label">Total Items</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="rangeAvgItems">0</div>
+        <div class="label">Avg Items / Day</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="rangeNewFoods">0</div>
+        <div class="label">New Foods</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="rangeDaysLogged">0</div>
+        <div class="label">Active Days</div>
+      </div>
+    </div>
+
+    <!-- Chart 1: Items Logged per Day -->
+    <div class="chart-card">
+      <h4>Items Logged per Day</h4>
+      <div style="position: relative; height: 220px; width: 100%;">
+        <canvas id="chartItemsPerDay"></canvas>
+      </div>
+    </div>
+
+    <!-- Chart 2: New Foods Over Time -->
+    <div class="chart-card">
+      <h4>New Foods Discovered Over Time</h4>
+      <div style="position: relative; height: 200px; width: 100%;">
+        <canvas id="chartNewFoods"></canvas>
+      </div>
+    </div>
+
+    <!-- Chart 3: Category Breakdown -->
+    <div class="chart-card">
+      <h4>Category Breakdown</h4>
+      <div style="position: relative; height: 240px; width: 100%;">
+        <canvas id="chartCategoryBreakdown"></canvas>
+      </div>
+    </div>
+
+    <!-- Past Days List -->
+    <h3 style="font-family:'Fraunces',serif; font-size:18px; margin:28px 0 14px;">
+      Past Days (Tap to view Summary)
+    </h3>
+    <div id="pastDaysList">
+      <!-- Rendered dynamically -->
+    </div>
+
+    <div class="disclaimer">
+      Important: The stats and trends this app shows (item counts, timing, category mix, "new foods" tally) are simple tracking statistics for your own awareness — not a medical or nutritional assessment.
+    </div>
+
+    <footer class="credit">Daily Intake Tracker &bull; Historical Trends</footer>
+
+    <!-- Fixed Bottom Tab Bar -->
+    <nav class="bottom-tabs">
+      <a href="index.html" aria-label="Diary">
+        <span class="tab-icon">📖</span>
+        <span>Diary</span>
+      </a>
+      <a href="summary.html" aria-label="Summary">
+        <span class="tab-icon">📋</span>
+        <span>Summary</span>
+      </a>
+      <a href="history.html" class="active" aria-label="History">
+        <span class="tab-icon">📈</span>
+        <span>History</span>
+      </a>
+      <a href="more.html" aria-label="More">
+        <span class="tab-icon">⚙️</span>
+        <span>More</span>
+      </a>
+    </nav>
+  </div>
+
+  <script>
+    let currentRangeDays = 14;
+    let rangeRecords = [];
+
+    // Chart instances
+    let chart1Instance = null;
+    let chart2Instance = null;
+    let chart3Instance = null;
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadRangeData();
+    });
+
+    function setRange(days) {
+      currentRangeDays = days;
+      document.querySelectorAll('.pill-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(`pill${days}`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      loadRangeData();
+    }
+
+    async function loadRangeData() {
+      const now = new Date();
+      const pastDate = new Date(Date.now() - (currentRangeDays - 1) * 86400000);
+
+      const endDate = now.toISOString().split('T')[0];
+      const startDate = pastDate.toISOString().split('T')[0];
+
+      try {
+        rangeRecords = await window.intakeDB.getItemsForDateRange(startDate, endDate);
+        updateOverviewStats();
+        renderCharts(startDate, endDate);
+        renderPastDaysList();
+      } catch (err) {
+        console.error('Error loading history data:', err);
+      }
+    }
+
+    function updateOverviewStats() {
+      const totalItems = rangeRecords.length;
+      const datesWithEntries = new Set(rangeRecords.map(r => r.intake_date));
+      const activeDays = datesWithEntries.size;
+      const avg = activeDays > 0 ? (totalItems / activeDays).toFixed(1) : '0';
+      const newFoods = rangeRecords.filter(r => r.is_new_food).length;
+
+      document.getElementById('rangeTotalItems').textContent = totalItems;
+      document.getElementById('rangeAvgItems').textContent = avg;
+      document.getElementById('rangeNewFoods').textContent = newFoods;
+      document.getElementById('rangeDaysLogged').textContent = `${activeDays}/${currentRangeDays}`;
+    }
+
+    function renderCharts(startDate, endDate) {
+      // Build date list array
+      const dateList = [];
+      const curr = new Date(startDate);
+      const end = new Date(endDate);
+      while (curr <= end) {
+        dateList.push(curr.toISOString().split('T')[0]);
+        curr.setDate(curr.getDate() + 1);
+      }
+
+      // 1. Items per day
+      const itemsPerDayMap = {};
+      const newFoodsPerDayMap = {};
+      dateList.forEach(d => {
+        itemsPerDayMap[d] = 0;
+        newFoodsPerDayMap[d] = 0;
+      });
+
+      // 2. Category counts
+      const categoryMap = {};
+
+      rangeRecords.forEach(r => {
+        if (itemsPerDayMap[r.intake_date] !== undefined) {
+          itemsPerDayMap[r.intake_date]++;
+        }
+        if (r.is_new_food && newFoodsPerDayMap[r.intake_date] !== undefined) {
+          newFoodsPerDayMap[r.intake_date]++;
+        }
+        const cat = r.category || 'Other';
+        categoryMap[cat] = (categoryMap[cat] || 0) + 1;
+      });
+
+      const displayLabels = dateList.map(d => {
+        const parts = d.split('-');
+        return `${Number(parts[1])}/${Number(parts[2])}`;
+      });
+
+      // Chart 1: Items per Day
+      const ctx1 = document.getElementById('chartItemsPerDay').getContext('2d');
+      if (chart1Instance) chart1Instance.destroy();
+      chart1Instance = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+          labels: displayLabels,
+          datasets: [{
+            label: 'Items Logged',
+            data: dateList.map(d => itemsPerDayMap[d]),
+            backgroundColor: '#c1694f',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { precision: 0 }
+            },
+            x: {
+              grid: { display: false }
+            }
+          }
+        }
+      });
+
+      // Chart 2: New Foods Over Time
+      const ctx2 = document.getElementById('chartNewFoods').getContext('2d');
+      if (chart2Instance) chart2Instance.destroy();
+      chart2Instance = new Chart(ctx2, {
+        type: 'bar',
+        data: {
+          labels: displayLabels,
+          datasets: [{
+            label: 'New Foods Tried',
+            data: dateList.map(d => newFoodsPerDayMap[d]),
+            backgroundColor: '#6b8f71',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { precision: 0 }
+            },
+            x: {
+              grid: { display: false }
+            }
+          }
+        }
+      });
+
+      // Chart 3: Category Breakdown
+      const categories = Object.keys(categoryMap);
+      const catCounts = categories.map(c => categoryMap[c]);
+      const palette = [
+        '#c1694f', '#6b8f71', '#d4a373', '#e76f51', '#2a9d8f',
+        '#e9c46a', '#457b9d', '#1d3557', '#9c6644', '#7f5539',
+        '#8338ec', '#3a86ff'
+      ];
+
+      const ctx3 = document.getElementById('chartCategoryBreakdown').getContext('2d');
+      if (chart3Instance) chart3Instance.destroy();
+      chart3Instance = new Chart(ctx3, {
+        type: 'doughnut',
+        data: {
+          labels: categories.length > 0 ? categories : ['No Data'],
+          datasets: [{
+            data: catCounts.length > 0 ? catCounts : [1],
+            backgroundColor: categories.length > 0 ? palette.slice(0, categories.length) : ['#e6ddc9'],
+            borderWidth: 2,
+            borderColor: '#fffdf8'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { boxWidth: 12, font: { size: 11 } }
+            }
+          }
+        }
+      });
+    }
+
+    function renderPastDaysList() {
+      const container = document.getElementById('pastDaysList');
+      container.innerHTML = '';
+
+      // Group records by date
+      const daysMap = {};
+      rangeRecords.forEach(r => {
+        if (!daysMap[r.intake_date]) daysMap[r.intake_date] = [];
+        daysMap[r.intake_date].push(r);
+      });
+
+      const dates = Object.keys(daysMap).sort((a, b) => b.localeCompare(a));
+
+      if (dates.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            No logged days recorded in the past ${currentRangeDays} days.
+          </div>
+        `;
+        return;
+      }
+
+      dates.forEach(dateStr => {
+        const items = daysMap[dateStr];
+        const count = items.length;
+
+        const distinctMeals = Array.from(new Set(
+          items
+            .map(r => r.meal_type)
+            .filter(m => ['Breakfast', 'Lunch', 'Dinner'].includes(m))
+        ));
+
+        const newCount = items.filter(r => r.is_new_food).length;
+        const packagedCount = items.filter(r => r.is_packaged_food).length;
+
+        const parts = dateStr.split('-');
+        const d = new Date(parts[0], parts[1] - 1, parts[2]);
+        const dateFormatted = d.toLocaleDateString(undefined, {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric'
+        });
+
+        const card = document.createElement('a');
+        card.className = 'history-card';
+        card.href = `summary.html?date=${dateStr}`;
+        card.title = `View summary for ${dateStr}`;
+
+        card.innerHTML = `
+          <div>
+            <div class="hist-date">${dateFormatted}</div>
+            <div class="hist-stats">
+              ${distinctMeals.join(' &bull; ') || 'Snacks/Other'}
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:14px; color:var(--accent-dark);">
+              ${count} ${count === 1 ? 'item' : 'items'}
+            </div>
+            <div style="display:flex; gap:4px; margin-top:4px; justify-content:flex-end;">
+              ${newCount > 0 ? `<span class="badge new" style="font-size:9px;">${newCount} new</span>` : ''}
+              ${packagedCount > 0 ? `<span class="badge packaged" style="font-size:9px;">${packagedCount} pkg</span>` : ''}
+            </div>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+  </script>
+</body>
+</html>

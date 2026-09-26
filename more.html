@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#c1694f">
+  <meta name="description" content="Account details, stat definitions, and settings for Daily Intake Tracker.">
+  <title>More — Daily Intake Tracker</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icons/favicon.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- Google Fonts: Fraunces, Inter, IBM Plex Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="session-guard.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="masthead">
+      <div class="eyebrow">DAILY INTAKE TRACKER</div>
+      <h1>Account &amp; More</h1>
+      <div class="rule"></div>
+    </header>
+
+    <!-- Account Details Card -->
+    <div class="entry-card">
+      <h3>Account Information</h3>
+      <div style="font-size: 14px; line-height: 1.8; margin-bottom: 16px;">
+        <div><strong>Email:</strong> <span id="moreUserEmail">Loading...</span></div>
+        <div><strong>Database:</strong> <span id="moreDbStatus">Checking...</span></div>
+        <div><strong>Idle Protection:</strong> 1-hour auto-logout enabled</div>
+      </div>
+      <button type="button" class="btn-ghost" onclick="handleSignOut()" style="color:var(--red); border-color:#f0c9be;">
+        Sign Out
+      </button>
+    </div>
+
+    <!-- Stat Definitions Table -->
+    <div class="entry-card">
+      <h3>Stat Definitions &amp; Methodology</h3>
+      <p style="font-size: 13px; color: var(--ink-soft); margin-top: -8px; margin-bottom: 14px;">
+        Reference guide for how daily metrics are tracked and calculated in the app:
+      </p>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 130px;">Stat</th>
+              <th>Meaning &amp; Logic</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Items</strong></td>
+              <td>Total individual food &amp; drink records logged for that date.</td>
+            </tr>
+            <tr>
+              <td><strong>Meals</strong></td>
+              <td>Distinct count of main meal types logged (Breakfast, Lunch, Dinner). Max 3 per day.</td>
+            </tr>
+            <tr>
+              <td><strong>Snacks</strong></td>
+              <td>Total entries categorized as Mid-Morning Snack or Evening Snack.</td>
+            </tr>
+            <tr>
+              <td><strong>Beverages</strong></td>
+              <td>Entries with category set to <em>Beverages</em> (coffee, tea, juices, water, etc.).</td>
+            </tr>
+            <tr>
+              <td><strong>New Foods</strong></td>
+              <td>Entries marked with <em>"First time trying this"</em> to track dietary variety.</td>
+            </tr>
+            <tr>
+              <td><strong>Packaged Foods</strong></td>
+              <td>Entries marked as packaged/processed commercial store-bought products.</td>
+            </tr>
+            <tr>
+              <td><strong>First / Last Intake</strong></td>
+              <td>Earliest and latest logged time of intake during that calendar day.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- About & Disclaimer -->
+    <div class="entry-card">
+      <h3>About Daily Intake Tracker</h3>
+      <p style="font-size: 13.5px; line-height: 1.5; color: var(--ink);">
+        A personal food &amp; drink diary designed for friction-free logging, clean meal timelines, and mindful observation.
+      </p>
+      
+      <div class="notice-box" style="margin-top: 14px; margin-bottom: 0;">
+        <strong>Important Notice:</strong><br>
+        The stats and trends this app shows (item counts, timing, category mix, "new foods" tally) are simple tracking statistics for your own personal awareness — <strong>not</strong> a medical diagnosis or nutritional assessment.
+      </div>
+    </div>
+
+    <!-- PWA & Setup Info -->
+    <div class="entry-card">
+      <h3>Install &amp; Cloud Setup</h3>
+      <p style="font-size: 13px; line-height: 1.5; color: var(--ink-soft); margin-bottom: 12px;">
+        To install this app on your phone or desktop:
+      </p>
+      <ul style="font-size: 13px; color: var(--ink-soft); padding-left: 20px; line-height: 1.6; margin: 0 0 14px;">
+        <li><strong>Android Chrome:</strong> Tap browser menu (⋮) &rarr; <em>Install app</em> or <em>Add to Home screen</em>.</li>
+        <li><strong>iOS Safari:</strong> Tap Share icon &rarr; <em>Add to Home Screen</em>.</li>
+        <li><strong>Desktop Chrome / Edge:</strong> Click the install icon in the address bar.</li>
+      </ul>
+      <p style="font-size: 12px; color: var(--ink-soft); margin: 0;">
+        Built on static HTML/CSS/JS + Supabase (Postgres + Auth + RLS) + GitHub Pages.
+      </p>
+    </div>
+
+    <div class="disclaimer">
+      Daily Intake Tracker &bull; Version 1.0.0
+    </div>
+
+    <footer class="credit">Daily Intake Tracker</footer>
+
+    <!-- Fixed Bottom Tab Bar -->
+    <nav class="bottom-tabs">
+      <a href="index.html" aria-label="Diary">
+        <span class="tab-icon">📖</span>
+        <span>Diary</span>
+      </a>
+      <a href="summary.html" aria-label="Summary">
+        <span class="tab-icon">📋</span>
+        <span>Summary</span>
+      </a>
+      <a href="history.html" aria-label="History">
+        <span class="tab-icon">📈</span>
+        <span>History</span>
+      </a>
+      <a href="more.html" class="active" aria-label="More">
+        <span class="tab-icon">⚙️</span>
+        <span>More</span>
+      </a>
+    </nav>
+  </div>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const user = await window.intakeAuth.getUser();
+        if (user) {
+          document.getElementById('moreUserEmail').textContent = user.email || 'Signed in';
+        } else {
+          document.getElementById('moreUserEmail').innerHTML = '<em>Not signed in</em>';
+        }
+
+        const isConfig = window.intakeAuth.isConfigured();
+        const dbStatusSpan = document.getElementById('moreDbStatus');
+        if (isConfig) {
+          dbStatusSpan.innerHTML = '<span style="color:var(--sage-dark); font-weight:600;">✓ Connected to Cloud Supabase</span>';
+        } else {
+          dbStatusSpan.innerHTML = '<span style="color:var(--accent-dark); font-weight:600;">Demo / Local Storage Mode (configure supabase-config.js for cloud)</span>';
+        }
+      } catch (e) {
+        document.getElementById('moreUserEmail').textContent = 'Error loading user';
+      }
+    });
+
+    async function handleSignOut() {
+      await window.intakeAuth.signOut();
+      window.location.href = './index.html';
+    }
+  </script>
+</body>
+</html>

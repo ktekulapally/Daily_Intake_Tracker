@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#c1694f">
+  <meta name="description" content="Daily Summary Report — clean meal bullet lists, tracking stats table, and Excel/PDF export.">
+  <title>Summary — Daily Intake Tracker</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icons/favicon.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- Google Fonts: Fraunces, Inter, IBM Plex Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="session-guard.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="masthead">
+      <div class="eyebrow">DAILY INTAKE TRACKER</div>
+      <h1>Daily Summary</h1>
+      <div class="rule"></div>
+    </header>
+
+    <!-- Toolbar / Date Navigator & Export Actions -->
+    <div class="toolbar no-print">
+      <div class="date-nav" style="margin-bottom:0;">
+        <button type="button" onclick="navigateDate(-1)" aria-label="Previous Day">‹</button>
+        <div class="date-label" id="summaryDateLabel">Today</div>
+        <button type="button" onclick="navigateDate(1)" aria-label="Next Day">›</button>
+        <input type="date" id="datePickerInput" onchange="onDatePickerChange(this.value)" aria-label="Pick date">
+      </div>
+
+      <div class="actions btn-export-group">
+        <button type="button" class="btn-ghost" onclick="exportToExcel()" title="Download Excel / CSV">📊 Excel</button>
+        <button type="button" class="btn-ghost" onclick="exportToPDF()" title="Print / Save as PDF">📄 PDF</button>
+        <button type="button" class="btn-secondary" onclick="window.print()" title="Print Summary">🖨️ Print</button>
+      </div>
+    </div>
+
+    <!-- Printable Report Container -->
+    <div id="reportContent" class="report-card">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid var(--paper-line); padding-bottom: 12px; margin-bottom: 20px;">
+        <div>
+          <h2 style="font-family:'Fraunces',serif; margin:0; font-size:22px;" id="reportHeadingDate">Intake Summary</h2>
+          <div style="font-size:12px; color:var(--ink-soft); margin-top:3px;" id="reportSubInfo">Prepared for your personal awareness</div>
+        </div>
+        <div style="text-align: right;">
+          <span class="badge" style="background:#f3ece0; color:var(--ink); font-family:'IBM Plex Mono',monospace;" id="totalItemsBadge">0 Items</span>
+        </div>
+      </div>
+
+      <!-- Meal by Meal Section (Bullet lists per meal) -->
+      <h3 style="font-family:'Fraunces',serif; font-size:17px; margin:0 0 14px; border-bottom:1px solid var(--paper-line); padding-bottom:6px;">
+        Meal-by-Meal Log
+      </h3>
+      <div id="mealBulletsContainer">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Daily Statistics Table -->
+      <h3 style="font-family:'Fraunces',serif; font-size:17px; margin:24px 0 10px; border-bottom:1px solid var(--paper-line); padding-bottom:6px;">
+        Daily Tracking Statistics
+      </h3>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Tracking Metric</th>
+              <th style="width: 140px; text-align: right;">Value</th>
+            </tr>
+          </thead>
+          <tbody id="statsTableBody">
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Disclaimer matching spec -->
+      <div class="disclaimer">
+        <strong>Important:</strong> The stats and trends this app shows (item counts, timing, category mix, "new foods" tally) are simple tracking statistics for your own awareness — not a medical or nutritional assessment.
+      </div>
+    </div>
+
+    <footer class="credit no-print">Daily Intake Tracker &bull; Summary Report</footer>
+
+    <!-- Fixed Bottom Tab Bar -->
+    <nav class="bottom-tabs no-print">
+      <a href="index.html" aria-label="Diary">
+        <span class="tab-icon">📖</span>
+        <span>Diary</span>
+      </a>
+      <a href="summary.html" class="active" aria-label="Summary">
+        <span class="tab-icon">📋</span>
+        <span>Summary</span>
+      </a>
+      <a href="history.html" aria-label="History">
+        <span class="tab-icon">📈</span>
+        <span>History</span>
+      </a>
+      <a href="more.html" aria-label="More">
+        <span class="tab-icon">⚙️</span>
+        <span>More</span>
+      </a>
+    </nav>
+  </div>
+
+  <script>
+    let selectedDate = new Date().toISOString().split('T')[0];
+    let dayRecords = [];
+
+    const MEAL_ORDER = [
+      'Breakfast',
+      'Mid-Morning Snack',
+      'Lunch',
+      'Evening Snack',
+      'Dinner',
+      'Other'
+    ];
+
+    function formatDisplayDate(dateStr) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+      const parts = dateStr.split('-');
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      const opts = { month: 'long', day: 'numeric', year: 'numeric', weekday: 'long' };
+      const formatted = d.toLocaleDateString(undefined, opts);
+
+      if (dateStr === todayStr) return `Today (${formatted})`;
+      if (dateStr === yesterday) return `Yesterday (${formatted})`;
+      return formatted;
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('date')) {
+        selectedDate = params.get('date');
+      }
+      updateDateDisplay();
+      await loadSummaryData();
+    });
+
+    function updateDateDisplay() {
+      document.getElementById('summaryDateLabel').textContent = selectedDate;
+      document.getElementById('datePickerInput').value = selectedDate;
+      document.getElementById('reportHeadingDate').textContent = formatDisplayDate(selectedDate);
+    }
+
+    function navigateDate(days) {
+      const parts = selectedDate.split('-');
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      d.setDate(d.getDate() + days);
+      selectedDate = d.toISOString().split('T')[0];
+      updateDateDisplay();
+      loadSummaryData();
+    }
+
+    function onDatePickerChange(val) {
+      if (!val) return;
+      selectedDate = val;
+      updateDateDisplay();
+      loadSummaryData();
+    }
+
+    async function loadSummaryData() {
+      try {
+        dayRecords = await window.intakeDB.getItemsForDate(selectedDate);
+        renderReport();
+      } catch (err) {
+        console.error('Failed to load summary records:', err);
+        document.getElementById('mealBulletsContainer').innerHTML = `
+          <div class="error-msg">Error loading summary: ${err.message}</div>
+        `;
+      }
+    }
+
+    function renderReport() {
+      const bulletsContainer = document.getElementById('mealBulletsContainer');
+      const tableBody = document.getElementById('statsTableBody');
+      bulletsContainer.innerHTML = '';
+      tableBody.innerHTML = '';
+
+      document.getElementById('totalItemsBadge').textContent = `${dayRecords.length} ${dayRecords.length === 1 ? 'Item' : 'Items'}`;
+
+      if (dayRecords.length === 0) {
+        bulletsContainer.innerHTML = `
+          <div class="empty-state">
+            No meals or drinks recorded for this date.<br>
+            <a href="index.html?date=${selectedDate}" style="color:var(--accent-dark); font-weight:600;">Go to Diary to add items</a>.
+          </div>
+        `;
+        renderStatsTable([], null, null);
+        return;
+      }
+
+      // Group records by meal
+      const grouped = {};
+      dayRecords.forEach(r => {
+        const meal = r.meal_type || 'Other';
+        if (!grouped[meal]) grouped[meal] = [];
+        grouped[meal].push(r);
+      });
+
+      // Build meal bullet sections
+      MEAL_ORDER.forEach(meal => {
+        const items = grouped[meal];
+        if (!items || items.length === 0) return;
+
+        const block = document.createElement('div');
+        block.className = 'summary-meal-block';
+
+        const times = items.map(i => i.intake_time).filter(Boolean);
+        const earliestTime = times.length > 0 ? times[0].slice(0, 5) : '';
+
+        block.innerHTML = `
+          <div class="summary-meal-title">
+            <span>${escapeHtml(meal)}</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--ink-soft);">${earliestTime}</span>
+          </div>
+          <ul class="summary-list">
+            ${items.map(item => {
+              const tags = [];
+              if (item.is_new_food) tags.push('<span class="badge new">New Food</span>');
+              if (item.is_packaged_food) tags.push('<span class="badge packaged">Packaged</span>');
+
+              const details = [];
+              if (item.quantity && item.unit) details.push(`<strong>${item.quantity} ${escapeHtml(item.unit)}</strong>`);
+              if (item.category) details.push(escapeHtml(item.category));
+              if (item.preparation_method && item.preparation_method !== 'Other') details.push(escapeHtml(item.preparation_method));
+              if (item.ingredients) details.push(`<em>Ingredients:</em> ${escapeHtml(item.ingredients)}`);
+              if (item.brand_restaurant) details.push(`(${escapeHtml(item.brand_restaurant)})`);
+              if (item.notes) details.push(`“${escapeHtml(item.notes)}”`);
+
+              return `
+                <li>
+                  <strong>${escapeHtml(item.food_name)}</strong>
+                  ${tags.length > 0 ? tags.join(' ') : ''}
+                  <div class="item-meta">${details.join(' &bull; ')}</div>
+                </li>
+              `;
+            }).join('')}
+          </ul>
+        `;
+        bulletsContainer.appendChild(block);
+      });
+
+      // Calculate statistics
+      renderStatsTable(dayRecords);
+    }
+
+    function renderStatsTable(records) {
+      const tableBody = document.getElementById('statsTableBody');
+      tableBody.innerHTML = '';
+
+      const totalItems = records.length;
+      
+      const distinctMeals = Array.from(new Set(
+        records
+          .map(r => r.meal_type)
+          .filter(m => ['Breakfast', 'Lunch', 'Dinner'].includes(m))
+      ));
+      
+      const snacks = records.filter(r => 
+        r.meal_type === 'Mid-Morning Snack' || r.meal_type === 'Evening Snack'
+      ).length;
+
+      const beverages = records.filter(r => r.category === 'Beverages').length;
+      const newFoods = records.filter(r => r.is_new_food).length;
+      const packaged = records.filter(r => r.is_packaged_food).length;
+
+      // First and last intake time
+      const validTimes = records.map(r => r.intake_time).filter(Boolean).sort();
+      const firstTime = validTimes.length > 0 ? validTimes[0].slice(0, 5) : '—';
+      const lastTime = validTimes.length > 0 ? validTimes[validTimes.length - 1].slice(0, 5) : '—';
+
+      let windowDuration = '—';
+      if (validTimes.length > 1 && firstTime !== lastTime) {
+        const [h1, m1] = firstTime.split(':').map(Number);
+        const [h2, m2] = lastTime.split(':').map(Number);
+        let diffMinutes = (h2 * 60 + m2) - (h1 * 60 + m1);
+        if (diffMinutes >= 0) {
+          const hours = Math.floor(diffMinutes / 60);
+          const mins = diffMinutes % 60;
+          windowDuration = `${hours}h ${mins}m`;
+        }
+      }
+
+      const rows = [
+        { label: 'Total Items Logged', value: totalItems },
+        { label: 'Main Meals Recorded', value: `${distinctMeals.length} (${distinctMeals.join(', ') || 'None'})` },
+        { label: 'Snacks Logged', value: snacks },
+        { label: 'Beverages Logged', value: beverages },
+        { label: 'New Foods Tried', value: newFoods },
+        { label: 'Packaged Foods', value: packaged },
+        { label: 'First Intake Time', value: firstTime },
+        { label: 'Last Intake Time', value: lastTime },
+        { label: 'Daily Intake Window', value: windowDuration }
+      ];
+
+      rows.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${row.label}</td>
+          <td class="num" style="text-align: right;">${row.value}</td>
+        `;
+        tableBody.appendChild(tr);
+      });
+    }
+
+    // Export to Excel / CSV
+    function exportToExcel() {
+      if (dayRecords.length === 0) {
+        alert("No records to export for this day.");
+        return;
+      }
+
+      const headers = [
+        "Date",
+        "Time",
+        "Meal Type",
+        "Food Name",
+        "Category",
+        "Quantity",
+        "Unit",
+        "Preparation Method",
+        "Ingredients",
+        "Brand/Restaurant",
+        "Notes",
+        "Packaged Food",
+        "New Food"
+      ];
+
+      const csvRows = [headers.join(',')];
+
+      dayRecords.forEach(r => {
+        const row = [
+          csvSafe(r.intake_date),
+          csvSafe(r.intake_time),
+          csvSafe(r.meal_type),
+          csvSafe(r.food_name),
+          csvSafe(r.category),
+          r.quantity,
+          csvSafe(r.unit),
+          csvSafe(r.preparation_method),
+          csvSafe(r.ingredients),
+          csvSafe(r.brand_restaurant),
+          csvSafe(r.notes),
+          r.is_packaged_food ? 'Yes' : 'No',
+          r.is_new_food ? 'Yes' : 'No'
+        ];
+        csvRows.push(row.join(','));
+      });
+
+      const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(csvRows.join("\n"));
+      const link = document.createElement("a");
+      link.setAttribute("href", csvContent);
+      link.setAttribute("download", `daily-intake-summary-${selectedDate}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function csvSafe(str) {
+      if (!str) return '""';
+      const clean = String(str).replace(/"/g, '""');
+      return `"${clean}"`;
+    }
+
+    function exportToPDF() {
+      // Browser Print view automatically applies printable layout
+      window.print();
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, m => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[m]));
+    }
+  </script>
+</body>
+</html>
