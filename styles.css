@@ -11,9 +11,75 @@
   --card: #fffdf8;
 }
 * { box-sizing: border-box; }
+
+/* ==========================================================================
+   PAGE THEMES — Unique background colors AND patterns for every tab
+   ========================================================================== */
+
+/* 1. Diary Tab: Warm Oat Linen with subtle notebook rules */
+body, body.theme-diary {
+  --paper: #f7f3ea;
+  --paper-line: #e6ddce;
+  --card: #fffefb;
+  --tab-color: #a1523c;
+  background-color: var(--paper);
+  background-image: linear-gradient(var(--paper-line) 1px, transparent 1px);
+  background-size: 100% 28px;
+  background-position: 0 0;
+}
+
+/* 2. Summary Tab: Botanical Fresh Sage with nutritional dot matrix */
+body.theme-summary {
+  --paper: #edf5ef;
+  --paper-line: #cde4d3;
+  --card: #f8fcf9;
+  --tab-color: #2b6137;
+  background-color: var(--paper);
+  background-image: radial-gradient(var(--paper-line) 1.5px, transparent 1.5px);
+  background-size: 20px 20px;
+  background-position: 0 0;
+}
+
+/* 3. History Tab: Harvest Amber with analytics graph blueprint grid */
+body.theme-history {
+  --paper: #fbf4e8;
+  --paper-line: #eedbbd;
+  --card: #fdfaf3;
+  --tab-color: #9c5519;
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--paper-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--paper-line) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: 0 0;
+}
+
+/* 4. AI Insights Tab: Discovery Lavender with diagonal neural hatching */
+body.theme-insights {
+  --paper: #f3edf8;
+  --paper-line: #ded0f0;
+  --card: #faf6fd;
+  --tab-color: #5c3596;
+  background-color: var(--paper);
+  background-image: repeating-linear-gradient(135deg, var(--paper-line) 0px, var(--paper-line) 1px, transparent 1px, transparent 16px);
+  background-size: auto;
+  background-position: 0 0;
+}
+
+/* 5. More / Account Tab: Studio Slate with geometric micro-grid */
+body.theme-more {
+  --paper: #edf2f6;
+  --paper-line: #d1dde6;
+  --card: #f8fafc;
+  --tab-color: #245880;
+  background-color: var(--paper);
+  background-image: radial-gradient(var(--paper-line) 1.2px, transparent 1.2px);
+  background-size: 16px 16px;
+  background-position: 0 0;
+}
+
 body {
   margin: 0;
-  background-color: var(--paper);
   color: var(--ink);
   font-family: 'Inter', sans-serif;
   min-height: 100vh;
@@ -31,18 +97,69 @@ header.masthead .rule { width: 56px; height: 3px; background: var(--accent); mar
 /* ---- Bottom tab bar ---- */
 nav.bottom-tabs {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
-  background: var(--card); border-top: 1px solid var(--paper-line);
-  display: flex; justify-content: space-around; padding: 8px 6px calc(8px + env(safe-area-inset-bottom, 0px));
-  box-shadow: 0 -2px 10px rgba(43,33,23,0.06);
+  background: rgba(255, 253, 248, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--paper-line);
+  display: flex; justify-content: space-around;
+  padding: 6px 4px calc(8px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -3px 14px rgba(43,33,23,0.08);
 }
 nav.bottom-tabs a {
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   text-decoration: none; color: var(--ink-soft); font-size: 11px; font-weight: 600;
-  padding: 4px 10px; border-radius: 10px; flex: 1; max-width: 110px;
+  padding: 6px 6px; border-radius: 12px; flex: 1; max-width: 95px;
+  transition: all 0.18s ease;
+  border: 1px solid transparent;
 }
-nav.bottom-tabs a .tab-icon { font-size: 19px; }
-nav.bottom-tabs a.active { color: var(--accent-dark); }
-nav.bottom-tabs a.active .tab-icon { transform: scale(1.05); }
+nav.bottom-tabs a .tab-icon {
+  font-size: 20px;
+  line-height: 1.1;
+  transition: transform 0.18s ease;
+}
+nav.bottom-tabs a .tab-label {
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+/* Tab button unique active patterns & colors */
+nav.bottom-tabs a.tab-diary.active {
+  background: #f5eee3;
+  border-color: #dcd0bc;
+  color: #a1523c;
+  box-shadow: 0 1px 3px rgba(43,33,23,0.06);
+}
+nav.bottom-tabs a.tab-summary.active {
+  background: #e8f3ea;
+  border-color: #c0dec6;
+  color: #2b6137;
+  box-shadow: 0 1px 3px rgba(43,33,23,0.06);
+}
+nav.bottom-tabs a.tab-history.active {
+  background: #faf0e0;
+  border-color: #ebd3b4;
+  color: #9c5519;
+  box-shadow: 0 1px 3px rgba(43,33,23,0.06);
+}
+nav.bottom-tabs a.tab-insights.active {
+  background: #f1ebf8;
+  border-color: #d7c5ee;
+  color: #5c3596;
+  box-shadow: 0 1px 3px rgba(43,33,23,0.06);
+}
+nav.bottom-tabs a.tab-more.active {
+  background: #e8f0f6;
+  border-color: #c6d9e8;
+  color: #245880;
+  box-shadow: 0 1px 3px rgba(43,33,23,0.06);
+}
+nav.bottom-tabs a:hover:not(.active) {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--ink);
+}
+nav.bottom-tabs a.active .tab-icon {
+  transform: scale(1.08);
+}
 
 /* ---- Auth card ---- */
 .auth-card { background: var(--card); border: 1px solid var(--paper-line); border-radius: 10px; padding: 32px 28px; max-width: 420px; margin: 32px auto 0; box-shadow: 0 1px 0 rgba(43,33,23,0.04); }
@@ -246,10 +363,149 @@ button { cursor: pointer; border: none; border-radius: 8px; font-family: 'Inter'
 .disclaimer { font-size: 11.5px; color: var(--ink-soft); border-top: 1px solid var(--paper-line); margin-top: 16px; padding-top: 10px; }
 footer.credit { text-align: center; font-size: 12px; color: var(--ink-soft); margin-top: 24px; }
 
-@media (max-width: 560px) {
-  .entry-grid, .summary-row { grid-template-columns: 1fr 1fr; }
-  .summary-row { grid-template-columns: repeat(2, 1fr); }
-  .date-nav .date-label { min-width: 150px; font-size: 15px; }
+@media (max-width: 600px) {
+  body {
+    padding: 16px 10px calc(80px + env(safe-area-inset-bottom, 12px));
+  }
+  .app {
+    width: 100%;
+  }
+  header.masthead {
+    margin-bottom: 18px;
+  }
+  header.masthead h1 {
+    font-size: 25px;
+    letter-spacing: -0.02em;
+  }
+  header.masthead .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+  }
+
+  /* Toolbar on mobile */
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .toolbar .who {
+    text-align: center;
+    font-size: 12.5px;
+  }
+  .toolbar .actions {
+    justify-content: center;
+    width: 100%;
+  }
+
+  /* Export action buttons on mobile */
+  .btn-export-group {
+    width: 100%;
+    display: flex;
+    gap: 6px;
+    justify-content: space-between;
+  }
+  .btn-export-group button {
+    flex: 1;
+    padding: 8px 4px;
+    font-size: 12px;
+  }
+
+  /* Date navigator on mobile */
+  .date-nav {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 14px;
+    width: 100%;
+  }
+  .date-nav .date-label {
+    min-width: 125px;
+    font-size: 14.5px;
+  }
+  .date-nav input[type="date"] {
+    max-width: 130px;
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  /* Metric stat cards in mobile: crisp 2x2 grid */
+  .summary-row, .summary-row.secondary {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .stat-card {
+    padding: 10px 6px;
+    border-radius: 10px;
+  }
+  .stat-card .value {
+    font-size: 20px;
+  }
+  .stat-card .stat-icon {
+    font-size: 20px;
+    margin-bottom: 3px;
+  }
+  .stat-card .label {
+    font-size: 9.5px;
+    letter-spacing: 0.02em;
+  }
+
+  /* Entry card & form */
+  .entry-card {
+    padding: 16px 14px;
+    border-radius: 10px;
+  }
+  .entry-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .entry-card h3 {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+
+  /* Report & chart cards */
+  .report-card {
+    padding: 16px 14px;
+    border-radius: 10px;
+  }
+  .chart-card {
+    padding: 14px 12px;
+  }
+
+  /* Bottom tab bar on mobile (5 tabs) */
+  nav.bottom-tabs {
+    padding: 6px 2px calc(6px + env(safe-area-inset-bottom, 0px));
+    gap: 2px;
+  }
+  nav.bottom-tabs a {
+    padding: 4px 1px;
+    max-width: 70px;
+    border-radius: 8px;
+  }
+  nav.bottom-tabs a .tab-icon {
+    font-size: 18px;
+  }
+  nav.bottom-tabs a .tab-label {
+    font-size: 9px;
+    letter-spacing: -0.02em;
+  }
+
+  /* Floating Action Button on mobile */
+  .fab {
+    right: 16px;
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    width: 48px;
+    height: 48px;
+    font-size: 23px;
+  }
+
+  /* Tables & data rows */
+  .data-table th, .data-table td {
+    padding: 8px 10px;
+    font-size: 12.5px;
+  }
 }
 
 /* ---- Tables & Data lists ---- */
