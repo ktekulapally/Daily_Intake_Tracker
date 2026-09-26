@@ -3,8 +3,8 @@
 // Connected to your live Supabase project
 // ============================================================================
 
-const SUPABASE_URL = (typeof localStorage !== 'undefined' && localStorage.getItem('intake_supabase_url')) || "https://rzgwoubtuyrpmwsezhqw.supabase.co";
-let SUPABASE_ANON_KEY = (typeof localStorage !== 'undefined' && localStorage.getItem('intake_supabase_anon_key')) || "";
+const SUPABASE_URL = "https://rzgwoubtuyrpmwsezhqw.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6Z3dvdWJ0dXlycG13c2V6aHF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyNjgwNjEsImV4cCI6MjEwMzg0NDA2MX0.RhlE5RDZ2P7pn4NTYfP8klhTTxDYvvykK0cKQLXpV1w";
 
 // Check whether live Supabase credentials have been configured
 const isSupabaseConfigured = () => {
