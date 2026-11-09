@@ -277,6 +277,24 @@ button { cursor: pointer; border: none; border-radius: 8px; font-family: 'Inter'
   color: #65429c;
 }
 
+.stat-card.card-homemade {
+  background: #edf5ee;
+  border-color: #c9e2cd;
+  color: #1f5028;
+}
+.stat-card.card-homemade .label {
+  color: #2b6137;
+}
+
+.stat-card.card-restaurant {
+  background: #fdf0eb;
+  border-color: #f3cfc2;
+  color: #9c3c26;
+}
+.stat-card.card-restaurant .label {
+  color: #9c3c26;
+}
+
 .stat-card.card-packaged {
   background: #fbeee8;
   border-color: #f2cbbe;
@@ -317,6 +335,8 @@ button { cursor: pointer; border: none; border-radius: 8px; font-family: 'Inter'
 .food-row .badges { display: flex; gap: 4px; flex-shrink: 0; }
 .food-row .badge { font-size: 10px; padding: 2px 7px; border-radius: 100px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
 .badge.new { background: #eef3ea; color: var(--sage-dark); }
+.badge.homemade { background: #edf5ee; color: #2b6137; }
+.badge.restaurant { background: #fdf0eb; color: #9c3c26; }
 .badge.packaged { background: #f4e9e0; color: var(--accent-dark); }
 .food-row .row-actions { display: flex; gap: 2px; flex-shrink: 0; }
 

@@ -347,7 +347,8 @@
         ));
 
         const newCount = items.filter(r => r.is_new_food).length;
-        const packagedCount = items.filter(r => r.is_packaged_food).length;
+        const restaurantCount = items.filter(r => (r.brand_restaurant || '').toLowerCase().includes('restaurant')).length;
+        const homeCount = items.filter(r => (r.brand_restaurant || '').toLowerCase().includes('home')).length;
 
         const parts = dateStr.split('-');
         const d = new Date(parts[0], parts[1] - 1, parts[2]);
@@ -373,9 +374,10 @@
             <div style="font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:14px; color:var(--accent-dark);">
               ${count} ${count === 1 ? 'item' : 'items'}
             </div>
-            <div style="display:flex; gap:4px; margin-top:4px; justify-content:flex-end;">
+            <div style="display:flex; gap:4px; margin-top:4px; justify-content:flex-end; flex-wrap:wrap;">
               ${newCount > 0 ? `<span class="badge new" style="font-size:9px;">${newCount} new</span>` : ''}
-              ${packagedCount > 0 ? `<span class="badge packaged" style="font-size:9px;">${packagedCount} pkg</span>` : ''}
+              ${homeCount > 0 ? `<span class="badge homemade" style="font-size:9px;">${homeCount} home</span>` : ''}
+              ${restaurantCount > 0 ? `<span class="badge restaurant" style="font-size:9px;">${restaurantCount} rest</span>` : ''}
             </div>
           </div>
         `;

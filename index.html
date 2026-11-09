@@ -103,7 +103,7 @@
         <input type="date" id="datePickerInput" onchange="onDatePickerChange(this.value)" aria-label="Pick date">
       </div>
 
-      <!-- Daily Stats Row (Items / Meals / Snacks / Beverages) -->
+      <!-- Daily Stats Row (Items / Meals / Snacks / New Foods) -->
       <div class="summary-row">
         <div class="stat-card card-items">
           <div class="stat-icon">🍽️</div>
@@ -120,24 +120,24 @@
           <div class="value" id="statSnacks">0</div>
           <div class="label">Snacks</div>
         </div>
-        <div class="stat-card card-beverages">
-          <div class="stat-icon">🍵</div>
-          <div class="value" id="statBeverages">0</div>
-          <div class="label">Beverages</div>
-        </div>
-      </div>
-
-      <!-- Secondary Stats Row (New Foods / Packaged Foods) -->
-      <div class="summary-row secondary">
         <div class="stat-card card-new-foods">
           <div class="stat-icon">✨</div>
           <div class="value" id="statNewFoods">0</div>
-          <div class="label">New Foods Tried</div>
+          <div class="label">New Foods</div>
         </div>
-        <div class="stat-card card-packaged">
-          <div class="stat-icon">📦</div>
-          <div class="value" id="statPackaged">0</div>
-          <div class="label">Packaged Foods</div>
+      </div>
+
+      <!-- Secondary Stats Row (Home Made / Restaurant) -->
+      <div class="summary-row secondary">
+        <div class="stat-card card-homemade">
+          <div class="stat-icon">🏠</div>
+          <div class="value" id="statHomeMade">0</div>
+          <div class="label">Home Made</div>
+        </div>
+        <div class="stat-card card-restaurant">
+          <div class="stat-icon">🍴</div>
+          <div class="value" id="statRestaurant">0</div>
+          <div class="label">Restaurant</div>
         </div>
       </div>
 
@@ -148,22 +148,17 @@
           <input type="hidden" id="entryId">
 
           <div class="entry-grid">
-            <div>
+            <div class="full">
               <label for="entryDate">Date</label>
               <input type="date" id="entryDate" required>
-            </div>
-            <div>
-              <label for="entryTime">Time</label>
-              <input type="time" id="entryTime" required>
             </div>
 
             <div>
               <label for="entryMealType">Meal Type</label>
               <select id="entryMealType" required>
                 <option value="Breakfast">Breakfast</option>
-                <option value="Mid-Morning Snack">Mid-Morning Snack</option>
                 <option value="Lunch">Lunch</option>
-                <option value="Evening Snack">Evening Snack</option>
+                <option value="Snack">Snack</option>
                 <option value="Dinner">Dinner</option>
               </select>
             </div>
@@ -171,71 +166,26 @@
             <div>
               <label for="entryCategory">Category</label>
               <select id="entryCategory" required>
-                <option value="Rice/Grains">Rice/Grains</option>
+                <option value="Rice">Rice</option>
                 <option value="Dairy">Dairy</option>
-                <option value="Vegetables">Vegetables</option>
-                <option value="Fruits">Fruits</option>
-                <option value="Protein/Meat">Protein/Meat</option>
-                <option value="Seafood">Seafood</option>
-                <option value="Pulses/Legumes">Pulses/Legumes</option>
-                <option value="Snacks">Snacks</option>
-                <option value="Beverages">Beverages</option>
+                <option value="Eggs">Eggs</option>
+                <option value="Meat">Meat</option>
                 <option value="Sweets/Desserts">Sweets/Desserts</option>
-                <option value="Condiments/Spices">Condiments/Spices</option>
                 <option value="Other">Other</option>
               </select>
             </div>
 
             <div class="full">
               <label for="entryFoodName">Food / Drink Name</label>
-              <input type="text" id="entryFoodName" required placeholder="e.g. Oatmeal with Almond Milk, Black Coffee">
-            </div>
-
-            <div>
-              <label for="entryQuantity">Quantity</label>
-              <input type="number" id="entryQuantity" step="any" min="0.01" required placeholder="1">
-            </div>
-
-            <div>
-              <label for="entryUnit">Unit</label>
-              <select id="entryUnit" required>
-                <option value="Pieces">Pieces</option>
-                <option value="Bowl">Bowl</option>
-                <option value="Cup">Cup</option>
-                <option value="Plate">Plate</option>
-                <option value="Slice">Slice</option>
-                <option value="g">g (Grams)</option>
-                <option value="ml">ml (Milliliters)</option>
-                <option value="tbsp">tbsp</option>
-                <option value="tsp">tsp</option>
-                <option value="Serving">Serving</option>
-                <option value="Other">Other</option>
-              </select>
+              <input type="text" id="entryFoodName" required placeholder="e.g. Scrambled Eggs, Chicken Biryani, Yogurt">
             </div>
 
             <div class="full">
-              <label for="entryIngredients">Ingredients</label>
-              <input type="text" id="entryIngredients" placeholder="e.g. Oats, almond milk, blueberries, chia seeds">
-            </div>
-
-            <div>
-              <label for="entryPreparation">Preparation Method</label>
-              <select id="entryPreparation">
-                <option value="Raw">Raw</option>
-                <option value="Boiled">Boiled</option>
-                <option value="Steamed">Steamed</option>
-                <option value="Grilled">Grilled</option>
-                <option value="Baked">Baked</option>
-                <option value="Roasted">Roasted</option>
-                <option value="Stir-fried">Stir-fried</option>
-                <option value="Fried">Fried</option>
-                <option value="Other">Other</option>
+              <label for="entrySource">Source</label>
+              <select id="entrySource">
+                <option value="Home Made">Home Made</option>
+                <option value="Restaurant">Restaurant</option>
               </select>
-            </div>
-
-            <div>
-              <label for="entryBrand">Brand / Restaurant</label>
-              <input type="text" id="entryBrand" placeholder="e.g. Home Cooked, Chobani">
             </div>
 
             <div class="full">
@@ -245,18 +195,8 @@
           </div>
 
           <div class="checkbox-row">
-            <input type="checkbox" id="entryIsPackaged">
-            <label for="entryIsPackaged">Packaged Food (commercial store-bought item)</label>
-          </div>
-
-          <div class="checkbox-row">
             <input type="checkbox" id="entryIsNewFood">
             <label for="entryIsNewFood">First time trying this (New Food)</label>
-          </div>
-
-          <div class="checkbox-row">
-            <input type="checkbox" id="entryPreviouslyConsumed" checked>
-            <label for="entryPreviouslyConsumed">Previously consumed in normal diet</label>
           </div>
 
           <div class="form-actions">
@@ -328,9 +268,8 @@
     // Ordered meal groups
     const MEAL_ORDER = [
       'Breakfast',
-      'Mid-Morning Snack',
       'Lunch',
-      'Evening Snack',
+      'Snack',
       'Dinner',
       'Other'
     ];
@@ -566,26 +505,30 @@
       );
       const meals = distinctMeals.size;
 
-      // Snacks = count of entries logged as snacks
+      // Snacks = count of entries logged as Snack
       const snacks = currentDayRecords.filter(r => 
-        r.meal_type === 'Mid-Morning Snack' || r.meal_type === 'Evening Snack'
+        r.meal_type === 'Snack' || (r.meal_type && r.meal_type.includes('Snack'))
       ).length;
-
-      // Beverages = category === 'Beverages'
-      const beverages = currentDayRecords.filter(r => r.category === 'Beverages').length;
 
       // New foods tally
       const newFoods = currentDayRecords.filter(r => r.is_new_food).length;
 
-      // Packaged foods tally
-      const packaged = currentDayRecords.filter(r => r.is_packaged_food).length;
+      // Home Made vs Restaurant tally
+      const homeMade = currentDayRecords.filter(r => {
+        const src = (r.brand_restaurant || '').toLowerCase();
+        return src.includes('home') || !src.includes('restaurant');
+      }).length;
+      const restaurant = currentDayRecords.filter(r => {
+        const src = (r.brand_restaurant || '').toLowerCase();
+        return src.includes('restaurant');
+      }).length;
 
       document.getElementById('statItems').textContent = items;
       document.getElementById('statMeals').textContent = meals;
       document.getElementById('statSnacks').textContent = snacks;
-      document.getElementById('statBeverages').textContent = beverages;
       document.getElementById('statNewFoods').textContent = newFoods;
-      document.getElementById('statPackaged').textContent = packaged;
+      document.getElementById('statHomeMade').textContent = homeMade;
+      document.getElementById('statRestaurant').textContent = restaurant;
     }
 
     function renderTimeline() {
@@ -602,10 +545,11 @@
         return;
       }
 
-      // Group records by meal_type
+      // Group records by meal_type (normalizing snacks)
       const grouped = {};
       currentDayRecords.forEach(r => {
-        const meal = r.meal_type || 'Other';
+        let meal = r.meal_type || 'Other';
+        if (meal.includes('Snack')) meal = 'Snack';
         if (!grouped[meal]) grouped[meal] = [];
         grouped[meal].push(r);
       });
@@ -615,10 +559,6 @@
         const records = grouped[meal];
         if (!records || records.length === 0) return;
 
-        // Earliest intake time in this meal
-        const times = records.map(r => r.intake_time).filter(Boolean);
-        const displayTime = times.length > 0 ? times[0].slice(0, 5) : '';
-
         const groupDiv = document.createElement('div');
         groupDiv.className = 'timeline-group';
 
@@ -627,7 +567,6 @@
         headerDiv.innerHTML = `
           <div class="meal-dot"></div>
           <div class="meal-name">${escapeHtml(meal)}</div>
-          ${displayTime ? `<div class="meal-time">${displayTime}</div>` : ''}
         `;
         groupDiv.appendChild(headerDiv);
 
@@ -635,25 +574,25 @@
           const row = document.createElement('div');
           row.className = 'food-row';
 
-          // Meta string: quantity unit · category · brand/prep
           const metaParts = [];
-          if (item.quantity && item.unit) metaParts.push(`${item.quantity} ${item.unit}`);
           if (item.category) metaParts.push(item.category);
-          if (item.preparation_method && item.preparation_method !== 'Other') metaParts.push(item.preparation_method);
-          if (item.brand_restaurant) metaParts.push(item.brand_restaurant);
           const metaText = metaParts.join(' &bull; ');
+
+          const isRest = (item.brand_restaurant || '').toLowerCase().includes('restaurant');
+          const sourceText = isRest ? 'Restaurant' : 'Home Made';
+          const sourceClass = isRest ? 'restaurant' : 'homemade';
 
           const badgesHtml = `
             <div class="badges">
               ${item.is_new_food ? '<span class="badge new">New</span>' : ''}
-              ${item.is_packaged_food ? '<span class="badge packaged">Packaged</span>' : ''}
+              <span class="badge ${sourceClass}">${sourceText}</span>
             </div>
           `;
 
           row.innerHTML = `
             <div class="info">
               <div class="food-name">${escapeHtml(item.food_name)}</div>
-              <div class="food-meta">${metaText}</div>
+              ${metaText ? `<div class="food-meta">${metaText}</div>` : ''}
               ${item.notes ? `<div class="food-meta" style="font-style: italic; color: var(--ink);">“${escapeHtml(item.notes)}”</div>` : ''}
             </div>
             ${badgesHtml}
@@ -677,16 +616,10 @@
 
       // Default date to current view date
       document.getElementById('entryDate').value = selectedDate;
-      // Default time to current time HH:MM
-      const now = new Date();
-      const hours = String(now.getHours()).padStart(2, '0');
-      const mins = String(now.getMinutes()).padStart(2, '0');
-      document.getElementById('entryTime').value = `${hours}:${mins}`;
-
-      document.getElementById('entryQuantity').value = 1;
-      document.getElementById('entryUnit').value = 'Bowl';
-      document.getElementById('entryPreparation').value = 'Raw';
-      document.getElementById('entryPreviouslyConsumed').checked = true;
+      document.getElementById('entryMealType').value = 'Breakfast';
+      document.getElementById('entryCategory').value = 'Rice';
+      document.getElementById('entrySource').value = 'Home Made';
+      document.getElementById('entryIsNewFood').checked = false;
 
       const card = document.getElementById('entryFormCard');
       card.classList.remove('hidden');
@@ -701,19 +634,19 @@
       document.getElementById('formTitle').textContent = 'Edit Item';
       document.getElementById('entryId').value = record.id;
       document.getElementById('entryDate').value = record.intake_date;
-      document.getElementById('entryTime').value = record.intake_time ? record.intake_time.slice(0, 5) : '';
-      document.getElementById('entryMealType').value = record.meal_type || 'Breakfast';
-      document.getElementById('entryCategory').value = record.category || 'Rice/Grains';
+
+      let mType = record.meal_type || 'Breakfast';
+      if (mType.includes('Snack')) mType = 'Snack';
+      document.getElementById('entryMealType').value = ['Breakfast', 'Lunch', 'Snack', 'Dinner'].includes(mType) ? mType : 'Breakfast';
+
+      document.getElementById('entryCategory').value = record.category || 'Rice';
       document.getElementById('entryFoodName').value = record.food_name || '';
-      document.getElementById('entryQuantity').value = record.quantity || 1;
-      document.getElementById('entryUnit').value = record.unit || 'Pieces';
-      document.getElementById('entryIngredients').value = record.ingredients || '';
-      document.getElementById('entryPreparation').value = record.preparation_method || 'Boiled';
-      document.getElementById('entryBrand').value = record.brand_restaurant || '';
+
+      const isRest = (record.brand_restaurant || '').toLowerCase().includes('restaurant');
+      document.getElementById('entrySource').value = isRest ? 'Restaurant' : 'Home Made';
+
       document.getElementById('entryNotes').value = record.notes || '';
-      document.getElementById('entryIsPackaged').checked = Boolean(record.is_packaged_food);
       document.getElementById('entryIsNewFood').checked = Boolean(record.is_new_food);
-      document.getElementById('entryPreviouslyConsumed').checked = Boolean(record.previously_consumed);
 
       const card = document.getElementById('entryFormCard');
       card.classList.remove('hidden');
@@ -733,19 +666,19 @@
       const id = document.getElementById('entryId').value;
       const recordData = {
         intake_date: document.getElementById('entryDate').value,
-        intake_time: document.getElementById('entryTime').value,
+        intake_time: '12:00', // default for DB schema compatibility
         meal_type: document.getElementById('entryMealType').value,
         category: document.getElementById('entryCategory').value,
         food_name: document.getElementById('entryFoodName').value.trim(),
-        quantity: parseFloat(document.getElementById('entryQuantity').value) || 1,
-        unit: document.getElementById('entryUnit').value,
-        ingredients: document.getElementById('entryIngredients').value.trim(),
-        preparation_method: document.getElementById('entryPreparation').value,
-        brand_restaurant: document.getElementById('entryBrand').value.trim(),
+        quantity: 1, // default for DB schema compatibility
+        unit: 'Serving', // default for DB schema compatibility
+        ingredients: '',
+        preparation_method: '',
+        brand_restaurant: document.getElementById('entrySource').value,
         notes: document.getElementById('entryNotes').value.trim(),
-        is_packaged_food: document.getElementById('entryIsPackaged').checked,
+        is_packaged_food: false,
         is_new_food: document.getElementById('entryIsNewFood').checked,
-        previously_consumed: document.getElementById('entryPreviouslyConsumed').checked
+        previously_consumed: true
       };
 
       try {

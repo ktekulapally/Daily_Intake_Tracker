@@ -122,9 +122,8 @@
 
     const MEAL_ORDER = [
       'Breakfast',
-      'Mid-Morning Snack',
       'Lunch',
-      'Evening Snack',
+      'Snack',
       'Dinner',
       'Other'
     ];
@@ -208,7 +207,8 @@
       // Group records by meal
       const grouped = {};
       dayRecords.forEach(r => {
-        const meal = r.meal_type || 'Other';
+        let meal = r.meal_type || 'Other';
+        if (meal.includes('Snack')) meal = 'Snack';
         if (!grouped[meal]) grouped[meal] = [];
         grouped[meal].push(r);
       });
@@ -221,33 +221,28 @@
         const block = document.createElement('div');
         block.className = 'summary-meal-block';
 
-        const times = items.map(i => i.intake_time).filter(Boolean);
-        const earliestTime = times.length > 0 ? times[0].slice(0, 5) : '';
-
         block.innerHTML = `
           <div class="summary-meal-title">
             <span>${escapeHtml(meal)}</span>
-            <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--ink-soft);">${earliestTime}</span>
           </div>
           <ul class="summary-list">
             ${items.map(item => {
               const tags = [];
               if (item.is_new_food) tags.push('<span class="badge new">New Food</span>');
-              if (item.is_packaged_food) tags.push('<span class="badge packaged">Packaged</span>');
+              const isRest = (item.brand_restaurant || '').toLowerCase().includes('restaurant');
+              const sourceText = isRest ? 'Restaurant' : 'Home Made';
+              const sourceClass = isRest ? 'restaurant' : 'homemade';
+              tags.push(`<span class="badge ${sourceClass}">${sourceText}</span>`);
 
               const details = [];
-              if (item.quantity && item.unit) details.push(`<strong>${item.quantity} ${escapeHtml(item.unit)}</strong>`);
-              if (item.category) details.push(escapeHtml(item.category));
-              if (item.preparation_method && item.preparation_method !== 'Other') details.push(escapeHtml(item.preparation_method));
-              if (item.ingredients) details.push(`<em>Ingredients:</em> ${escapeHtml(item.ingredients)}`);
-              if (item.brand_restaurant) details.push(`(${escapeHtml(item.brand_restaurant)})`);
+              if (item.category) details.push(`Category: <strong>${escapeHtml(item.category)}</strong>`);
               if (item.notes) details.push(`“${escapeHtml(item.notes)}”`);
 
               return `
                 <li>
                   <strong>${escapeHtml(item.food_name)}</strong>
                   ${tags.length > 0 ? tags.join(' ') : ''}
-                  <div class="item-meta">${details.join(' &bull; ')}</div>
+                  ${details.length > 0 ? `<div class="item-meta">${details.join(' &bull; ')}</div>` : ''}
                 </li>
               `;
             }).join('')}
@@ -273,40 +268,26 @@
       ));
       
       const snacks = records.filter(r => 
-        r.meal_type === 'Mid-Morning Snack' || r.meal_type === 'Evening Snack'
+        r.meal_type === 'Snack' || (r.meal_type && r.meal_type.includes('Snack'))
       ).length;
 
-      const beverages = records.filter(r => r.category === 'Beverages').length;
       const newFoods = records.filter(r => r.is_new_food).length;
-      const packaged = records.filter(r => r.is_packaged_food).length;
-
-      // First and last intake time
-      const validTimes = records.map(r => r.intake_time).filter(Boolean).sort();
-      const firstTime = validTimes.length > 0 ? validTimes[0].slice(0, 5) : '—';
-      const lastTime = validTimes.length > 0 ? validTimes[validTimes.length - 1].slice(0, 5) : '—';
-
-      let windowDuration = '—';
-      if (validTimes.length > 1 && firstTime !== lastTime) {
-        const [h1, m1] = firstTime.split(':').map(Number);
-        const [h2, m2] = lastTime.split(':').map(Number);
-        let diffMinutes = (h2 * 60 + m2) - (h1 * 60 + m1);
-        if (diffMinutes >= 0) {
-          const hours = Math.floor(diffMinutes / 60);
-          const mins = diffMinutes % 60;
-          windowDuration = `${hours}h ${mins}m`;
-        }
-      }
+      const homeMade = records.filter(r => {
+        const src = (r.brand_restaurant || '').toLowerCase();
+        return src.includes('home') || !src.includes('restaurant');
+      }).length;
+      const restaurant = records.filter(r => {
+        const src = (r.brand_restaurant || '').toLowerCase();
+        return src.includes('restaurant');
+      }).length;
 
       const rows = [
         { icon: '🍽️', label: 'Total Items Logged', value: totalItems },
         { icon: '🍲', label: 'Main Meals Recorded', value: `${distinctMeals.length} (${distinctMeals.join(', ') || 'None'})` },
         { icon: '🥪', label: 'Snacks Logged', value: snacks },
-        { icon: '🍵', label: 'Beverages Logged', value: beverages },
         { icon: '✨', label: 'New Foods Tried', value: newFoods },
-        { icon: '📦', label: 'Packaged Foods', value: packaged },
-        { icon: '⏰', label: 'First Intake Time', value: firstTime },
-        { icon: '🌙', label: 'Last Intake Time', value: lastTime },
-        { icon: '⏳', label: 'Daily Intake Window', value: windowDuration }
+        { icon: '🏠', label: 'Home Made Items', value: homeMade },
+        { icon: '🍴', label: 'Restaurant Items', value: restaurant }
       ];
 
       rows.forEach(row => {
@@ -328,36 +309,25 @@
 
       const headers = [
         "Date",
-        "Time",
         "Meal Type",
         "Food Name",
         "Category",
-        "Quantity",
-        "Unit",
-        "Preparation Method",
-        "Ingredients",
-        "Brand/Restaurant",
+        "Source",
         "Notes",
-        "Packaged Food",
         "New Food"
       ];
 
       const csvRows = [headers.join(',')];
 
       dayRecords.forEach(r => {
+        const isRest = (r.brand_restaurant || '').toLowerCase().includes('restaurant');
         const row = [
           csvSafe(r.intake_date),
-          csvSafe(r.intake_time),
           csvSafe(r.meal_type),
           csvSafe(r.food_name),
           csvSafe(r.category),
-          r.quantity,
-          csvSafe(r.unit),
-          csvSafe(r.preparation_method),
-          csvSafe(r.ingredients),
-          csvSafe(r.brand_restaurant),
+          csvSafe(isRest ? 'Restaurant' : 'Home Made'),
           csvSafe(r.notes),
-          r.is_packaged_food ? 'Yes' : 'No',
           r.is_new_food ? 'Yes' : 'No'
         ];
         csvRows.push(row.join(','));

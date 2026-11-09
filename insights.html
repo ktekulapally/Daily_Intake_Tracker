@@ -42,8 +42,8 @@
     <div class="entry-card">
       <h3>Weekly Intake &amp; Macro Balance Analysis</h3>
       <p style="color:var(--ink-soft); font-size:13.5px; margin-top:-6px; line-height:1.5;">
-        Synthesizes the food and drinks you've logged over the past week (or custom period) to evaluate your
-        <strong>protein vs. carbohydrate balance</strong>, plant diversity, and packaged food frequency,
+        Synthesizes the meals and food items you've logged over the past week (or custom period) to evaluate your
+        <strong>protein vs. carbohydrate balance</strong>, category mix (Rice, Meat, Eggs, Dairy, Sweets), and Home Made vs. Restaurant dining ratio,
         and provides tailored recommendations for your upcoming week.
       </p>
 
@@ -309,105 +309,103 @@
     }
 
     function summarizeIntake(records, days) {
-      let proteinCount = 0;
-      let carbCount = 0;
-      let vegCount = 0;
-      let fruitCount = 0;
+      let riceCount = 0;
       let dairyCount = 0;
-      let beverageCount = 0;
-      let snackSweetsCount = 0;
+      let eggsCount = 0;
+      let meatCount = 0;
+      let sweetsCount = 0;
+      let otherCount = 0;
 
-      const proteinItems = [];
-      const carbItems = [];
-      const vegItems = [];
-      const mealCounts = { Breakfast: 0, 'Mid-Morning Snack': 0, Lunch: 0, 'Evening Snack': 0, Dinner: 0 };
-      const uniqueDays = new Set();
-      let packagedCount = 0;
+      let homeMadeCount = 0;
+      let restaurantCount = 0;
       let newFoodsCount = 0;
+
+      const riceItems = [];
+      const meatItems = [];
+      const eggItems = [];
+      const dairyItems = [];
+      const sweetItems = [];
+      const otherItems = [];
+
+      const mealCounts = { Breakfast: 0, Lunch: 0, Snack: 0, Dinner: 0, Other: 0 };
+      const uniqueDays = new Set();
 
       records.forEach(r => {
         uniqueDays.add(r.intake_date);
-        if (mealCounts[r.meal_type] !== undefined) mealCounts[r.meal_type]++;
-        if (r.is_packaged_food) packagedCount++;
+        const mType = r.meal_type || 'Other';
+        if (mealCounts[mType] !== undefined) {
+          mealCounts[mType]++;
+        } else if (mType.toLowerCase().includes('snack')) {
+          mealCounts['Snack']++;
+        } else {
+          mealCounts['Other']++;
+        }
+
+        const source = (r.brand_restaurant || '').toLowerCase();
+        if (source.includes('restaurant')) {
+          restaurantCount++;
+        } else {
+          homeMadeCount++;
+        }
+
         if (r.is_new_food) newFoodsCount++;
 
-        const name = (r.food_name || '').toLowerCase();
         const cat = (r.category || '').toLowerCase();
-        const ing = (r.ingredients || '').toLowerCase();
-        const combined = `${name} ${cat} ${ing}`;
+        const name = r.food_name || '';
 
-        let classified = false;
-
-        // Check protein
-        if (['protein/meat', 'seafood', 'pulses/legumes'].includes(cat) || PROTEIN_KEYWORDS.some(k => combined.includes(k))) {
-          proteinCount++;
-          proteinItems.push(r.food_name);
-          classified = true;
-        }
-
-        // Check carbs
-        if (['rice/grains'].includes(cat) || CARB_KEYWORDS.some(k => combined.includes(k))) {
-          carbCount++;
-          carbItems.push(r.food_name);
-          classified = true;
-        }
-
-        // Check vegetables
-        if (cat.includes('vegetable') || VEG_KEYWORDS.some(k => combined.includes(k))) {
-          vegCount++;
-          vegItems.push(r.food_name);
-          classified = true;
-        }
-
-        // Check fruits
-        if (cat.includes('fruit')) {
-          fruitCount++;
-          classified = true;
-        }
-
-        // Check dairy
-        if (cat.includes('dairy') && !classified) {
+        if (cat === 'rice' || cat.includes('rice') || cat.includes('grain')) {
+          riceCount++;
+          riceItems.push(name);
+        } else if (cat === 'meat' || cat.includes('meat') || cat.includes('chicken') || cat.includes('fish') || cat.includes('seafood')) {
+          meatCount++;
+          meatItems.push(name);
+        } else if (cat === 'eggs' || cat.includes('egg')) {
+          eggsCount++;
+          eggItems.push(name);
+        } else if (cat === 'dairy' || cat.includes('dairy') || cat.includes('milk') || cat.includes('paneer') || cat.includes('curd')) {
           dairyCount++;
-          classified = true;
-        }
-
-        // Check beverages
-        if (cat.includes('beverage')) {
-          beverageCount++;
-          classified = true;
-        }
-
-        // Sweets or snacks
-        if (cat.includes('sweet') || cat.includes('snack') || r.is_packaged_food) {
-          if (!classified) snackSweetsCount++;
+          dairyItems.push(name);
+        } else if (cat.includes('sweet') || cat.includes('dessert')) {
+          sweetsCount++;
+          sweetItems.push(name);
+        } else {
+          otherCount++;
+          otherItems.push(name);
         }
       });
+
+      const proteinCount = eggsCount + meatCount;
+      const carbCount = riceCount;
 
       return {
         totalRecords: records.length,
         daysTracked: uniqueDays.size,
         periodDays: days,
+        riceCount,
+        dairyCount,
+        eggsCount,
+        meatCount,
+        sweetsCount,
+        otherCount,
         proteinCount,
         carbCount,
-        vegCount,
-        fruitCount,
-        dairyCount,
-        beverageCount,
-        snackSweetsCount,
-        packagedCount,
+        homeMadeCount,
+        restaurantCount,
         newFoodsCount,
-        proteinItems: Array.from(new Set(proteinItems)),
-        carbItems: Array.from(new Set(carbItems)),
-        vegItems: Array.from(new Set(vegItems)),
+        riceItems: Array.from(new Set(riceItems)),
+        meatItems: Array.from(new Set(meatItems)),
+        eggItems: Array.from(new Set(eggItems)),
+        dairyItems: Array.from(new Set(dairyItems)),
+        sweetItems: Array.from(new Set(sweetItems)),
+        otherItems: Array.from(new Set(otherItems)),
         mealCounts,
         macroDistribution: {
-          'Protein-Rich Foods': proteinCount,
-          'Carbohydrate-Rich Foods': carbCount,
-          'Vegetables & Fiber': vegCount,
-          'Fruits & Berries': fruitCount,
-          'Dairy & Healthy Fats': dairyCount,
-          'Beverages & Hydration': beverageCount,
-          'Snacks & Processed': snackSweetsCount
+          'Rice (Carbs)': riceCount,
+          'Meat (Protein)': meatCount,
+          'Eggs (Protein)': eggsCount,
+          'Dairy': dairyCount,
+          'Sweets / Desserts': sweetsCount,
+          'Other': otherCount
         }
       };
     }
@@ -416,73 +414,77 @@
     function generateNutritionalAdvice(data) {
       const {
         totalRecords, daysTracked, periodDays,
-        proteinCount, carbCount, vegCount, fruitCount,
-        packagedCount, newFoodsCount, proteinItems, carbItems, vegItems
+        riceCount, dairyCount, eggsCount, meatCount, sweetsCount, otherCount,
+        proteinCount, carbCount, homeMadeCount, restaurantCount, newFoodsCount,
+        riceItems, meatItems, eggItems, dairyItems, sweetItems
       } = data;
 
       const carbToProteinRatio = proteinCount > 0 ? (carbCount / proteinCount).toFixed(1) : carbCount;
       const isCarbHeavy = carbCount > proteinCount * 1.5;
-      const isProteinSparse = proteinCount < (daysTracked * 1.5);
-      const isVegLow = vegCount < (daysTracked * 1.5);
-      const packagedRatio = ((packagedCount / totalRecords) * 100).toFixed(0);
+      const isProteinSparse = proteinCount < (daysTracked * 1.2);
+      const isSweetsHigh = sweetsCount > (daysTracked * 0.8);
+      const restaurantRatio = ((restaurantCount / totalRecords) * 100).toFixed(0);
+      const homeMadeRatio = ((homeMadeCount / totalRecords) * 100).toFixed(0);
 
-      let summaryParagraph = `Over the past **${periodDays} days** (active across **${daysTracked} days**), you logged **${totalRecords} food & drink items**. `;
-      
+      let summaryParagraph = `Over the past **${periodDays} days** (active across **${daysTracked} days**), you logged **${totalRecords} items** across your meals and snacks. `;
+
       let macroStatus = '';
       if (isCarbHeavy) {
-        macroStatus = `Your intake leans **heavily towards carbohydrate-rich foods** (ratio of ~${carbToProteinRatio}:1 carbs to protein). While quality carbs provide vital cognitive and cellular energy, pairing them with adequate lean protein prevents rapid blood sugar spikes and sustains satiety.`;
+        macroStatus = `Your intake leans **heavily towards rice and carbohydrate staples** (ratio of ~${carbToProteinRatio}:1 carbs to protein). While rice is an excellent clean energy source, pairing it with consistent protein (eggs, poultry, fish, lean meat) stabilizes blood sugar and extends fullness between meals.`;
       } else if (proteinCount >= carbCount * 0.8) {
-        macroStatus = `Your intake shows a **robust and well-anchored protein profile** relative to carbohydrates (ratio of ~${carbToProteinRatio}:1). This supports muscle preservation, satiety, and steady glycemic levels throughout the day.`;
+        macroStatus = `Your intake shows a **strong and consistent protein foundation** relative to carbohydrate intake (ratio of ~${carbToProteinRatio}:1). This provides great satiety, metabolic support, and sustained muscle energy.`;
       } else {
-        macroStatus = `Your macronutrient profile shows a **balanced moderate distribution** between carbohydrates and protein sources, offering a stable foundation for day-to-day energy.`;
+        macroStatus = `Your macronutrient profile reflects a **balanced distribution** between your rice staples and protein foods (eggs and meat), creating a reliable energy rhythm.`;
       }
 
-      const proteinListStr = proteinItems.slice(0, 5).join(', ') || 'Limited high-protein foods identified';
-      const carbListStr = carbItems.slice(0, 5).join(', ') || 'Grains and carbohydrates';
-      const vegListStr = vegItems.slice(0, 5).join(', ') || 'Mixed vegetables';
+      const proteinListStr = [...eggItems, ...meatItems].slice(0, 6).join(', ') || 'Eggs or meat';
+      const riceListStr = riceItems.slice(0, 5).join(', ') || 'Rice staples';
+      const dairyListStr = dairyItems.slice(0, 4).join(', ') || 'None recorded';
+      const sweetListStr = sweetItems.slice(0, 4).join(', ') || 'None';
 
       return `
-### 1. Weekly Intake & Food Category Review
+### 1. Weekly Food Category & Source Review
 ${summaryParagraph}
-- **Primary Protein Sources Logged:** ${proteinListStr}
-- **Primary Carbohydrate Sources Logged:** ${carbListStr}
-- **Vegetable & Fiber Diversity:** ${vegItems.length} distinct plant varieties recorded (${vegListStr})
-- **Packaged / Commercial Foods:** ${packagedCount} items (~${packagedRatio}% of total entries)
-- **New Foods Explored:** ${newFoodsCount} items marked as new taste explorations
+- **Rice & Carbohydrate Staples:** ${riceCount} items logged (${riceListStr})
+- **Protein Sources (Eggs & Meat):** ${proteinCount} items logged (${eggsCount} eggs, ${meatCount} meat) &mdash; *${proteinListStr}*
+- **Dairy Products:** ${dairyCount} items (${dairyListStr})
+- **Sweets & Desserts:** ${sweetsCount} items (${sweetListStr})
+- **Food Source Ratio:** **${homeMadeCount} Home Made (${homeMadeRatio}%)** vs. **${restaurantCount} Restaurant (${restaurantRatio}%)**
+- **New Foods Explored:** ${newFoodsCount} items marked as new foods
 
 ---
 
 ### 2. Macronutrient Balance: Protein vs. Carbohydrates
 ${macroStatus}
 
-- **Protein Intake Tally:** **${proteinCount} instances** (${(proteinCount / (daysTracked || 1)).toFixed(1)}/day). ${isProteinSparse ? '⚠️ *Below recommended frequency of 2-3 protein-centered meals daily.*' : '✅ *Consistent protein distribution across main meals.*'}
-- **Carbohydrate Tally:** **${carbCount} instances** (${(carbCount / (daysTracked || 1)).toFixed(1)}/day).
-- **Dietary Fiber & Greens:** **${vegCount + fruitCount} instances** of plant produce. ${isVegLow ? '⚠️ *Target increasing whole vegetables and leafy greens for gut microbiome health.*' : '✅ *Commendable plant and fiber intake.*'}
+- **Protein Intake (Meat & Eggs):** **${proteinCount} instances** (~${(proteinCount / (daysTracked || 1)).toFixed(1)}/day). ${isProteinSparse ? '⚠️ *Consider having eggs or a meat portion in at least 2 main meals each day.*' : '✅ *Consistent protein distribution across your meals.*'}
+- **Carbohydrate Intake (Rice):** **${riceCount} instances** (~${(riceCount / (daysTracked || 1)).toFixed(1)}/day).
+- **Home Cooking vs. Dining Out:** ${restaurantCount > homeMadeCount ? `⚠️ *Restaurant meals made up ${restaurantRatio}% of your intake. Restaurant dishes typically contain higher cooking oil, sodium, and refined sugars.*` : `✅ *Fantastic home-cooked food ratio of ${homeMadeRatio}%! This offers maximum control over ingredients.*`}
+${isSweetsHigh ? `- **Sweets & Desserts Watch:** ⚠️ *${sweetsCount} sweet/dessert items logged (~${(sweetsCount / (daysTracked || 1)).toFixed(1)}/day). Moderating sweet frequency helps prevent energy crashes.*` : ''}
 
 ---
 
 ### 3. Actionable Recommendations for Next Week
 
-1. **Balance Every Main Carb with a Protein Partner:**
-   Whenever enjoying ${carbItems[0] || 'rice or bread'}, deliberately accompany it with 20–30g of protein (such as ${proteinItems[0] || 'eggs, lentils, chicken, or tofu'}). This slows gastric emptying and keeps your appetite steady for 3–4 hours.
+1. **Pair Every Rice Serving with an Egg or Meat Anchor:**
+   Whenever having rice for lunch or dinner, make sure each plate has a dedicated protein anchor (e.g. 2 eggs or a palm-sized portion of meat/chicken/fish). This balances the glycemic load and sustains your energy.
 
-2. **Incorporate the "Plate Half-Rule" for Vegetables:**
-   ${isVegLow ? `Increase your fiber intake by aiming for at least half your lunch or dinner plate to be filled with non-starchy vegetables (spinach, broccoli, zucchini, peppers, or fresh crisp salads).` : `Continue your solid veggie intake and challenge yourself to introduce 1 new seasonal vegetable next week.`}
+2. **Leverage Dairy for High-Protein Snacking:**
+   ${dairyCount < daysTracked ? `Incorporate Greek yogurt, curd, or cottage cheese/paneer as an afternoon snack instead of sweets or processed bites. It adds satiety with zero refined sugar.` : `Maintain your healthy dairy intake to supplement calcium and slow-digesting protein.`}
 
-3. **Mindful Packaged Food Swaps:**
-   ${packagedCount > 3 ? `Packaged items accounted for ${packagedRatio}% of your meals. Try replacing one commercial snack per day with raw nuts, unsweetened Greek yogurt with berries, or roasted chickpeas.` : `Great job keeping packaged foods minimal and emphasizing whole foods!`}
+3. **Manage Dining Out & Restaurant Meals:**
+   ${restaurantCount > 3 ? `You logged ${restaurantCount} restaurant meals (${restaurantRatio}%). For upcoming restaurant visits, prioritize grilled or tandoori meat and egg dishes over deep-fried or heavy sauce preparations.` : `Your home cooking discipline is excellent. Keep batch-cooking your rice, egg, and meat staples to stay consistent.`}
 
-4. **Hydration and Beverage Timing:**
-   Ensure non-caffeinated fluid intake (pure water or herbal infusions) occurs consistently between meals rather than chugging large volumes right before or during heavy meals to preserve digestive enzyme efficiency.
+4. **Mindful Sweet Timing:**
+   ${sweetsCount > 0 ? `Enjoy desserts immediately following a protein-rich meal rather than on an empty stomach. The presence of protein and fats blunts post-meal insulin spikes.` : `Zero sweet cravings logged — outstanding dietary discipline!`}
 
 ---
 
 ### 4. Suggested Blueprint for Your Upcoming Week
-- **Breakfast:** Pair complex carbs with steady protein (e.g. Eggs on whole-grain sourdough OR Oatmeal blended with Greek yogurt/seeds).
-- **Mid-Morning:** Hydration check (Water/Green tea) + optional handful of raw almonds or walnuts.
-- **Lunch:** Main protein (${proteinItems[1] || 'Salmon/Chicken/Tofu/Dal'}) + 1 generous cup of steamed or roasted vegetables + moderate complex grain (${carbItems[0] || 'brown rice or quinoa'}).
-- **Evening Snack:** Fresh seasonal fruit or crunchy vegetable sticks with hummus.
-- **Dinner:** Light, high-protein bowl or warm vegetable lentil soup with olive oil dressing.
+- **Breakfast:** Eggs (2-3 boiled, scrambled, or omelet) + optional toast or warm beverage.
+- **Lunch:** Moderate portion of Rice paired generously with a Meat curry/stir-fry or Egg curry + bowl of fresh curd/yogurt.
+- **Snack:** Dairy refreshment (yogurt, buttermilk, or paneer cubes) or a boiled egg.
+- **Dinner:** Lean Meat or Eggs with a lighter rice serving, finished early for restful sleep.
       `.trim();
     }
 
@@ -490,21 +492,27 @@ ${macroStatus}
     async function callGeminiAPI(data, key) {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
       const prompt = `
-You are a friendly, evidence-based nutritional consultant and dietitian reviewing a client's food & drink log over the past ${data.periodDays} days.
+You are a friendly, evidence-based nutritional consultant and dietitian reviewing a client's food log over the past ${data.periodDays} days.
+The client logs intake using simplified categories: Rice, Dairy, Eggs, Meat, Sweets/Desserts, Other, and tracks whether each meal is "Home Made" or "Restaurant".
+
 Client Log Data:
 - Days actively tracked: ${data.daysTracked} out of ${data.periodDays} days
 - Total items logged: ${data.totalRecords}
-- Protein-rich items logged (${data.proteinCount}): ${data.proteinItems.join(', ')}
-- Carb-rich items logged (${data.carbCount}): ${data.carbItems.join(', ')}
-- Vegetable & fruit items logged: ${data.vegCount} vegetables, ${data.fruitCount} fruits (${data.vegItems.join(', ')})
-- Packaged foods tally: ${data.packagedCount}
+- Rice (Carbs): ${data.riceCount} items (${data.riceItems.join(', ')})
+- Eggs (Protein): ${data.eggsCount} items (${data.eggItems.join(', ')})
+- Meat (Protein): ${data.meatCount} items (${data.meatItems.join(', ')})
+- Dairy: ${data.dairyCount} items (${data.dairyItems.join(', ')})
+- Sweets & Desserts: ${data.sweetsCount} items (${data.sweetItems.join(', ')})
+- Other: ${data.otherCount} items (${data.otherItems.join(', ')})
+- Dining Source: ${data.homeMadeCount} Home Made vs. ${data.restaurantCount} Restaurant
 - New foods tried: ${data.newFoodsCount}
 
 Please provide:
 1. "Weekly Intake Review": Concise synthesis of what kind of food they have taken over the week.
-2. "Macro Balance: Protein vs. Carbohydrate Breakdown": Detailed assessment of whether they are eating protein-rich vs. carb-rich foods and how balanced it is.
-3. "Practical Recommendations for Next Week": 3-4 specific, encouraging, actionable adjustments for the upcoming week.
-4. "Suggested Meal Blueprint for Next Week": A practical meal outline.
+2. "Macro Balance: Protein vs. Carbohydrate Breakdown": Detailed assessment of whether they are eating protein-rich (Meat, Eggs) vs. carb-rich (Rice) foods and how balanced it is.
+3. "Source Analysis": Home Made vs. Restaurant dining balance.
+4. "Practical Recommendations for Next Week": 3-4 specific, encouraging, actionable adjustments for the upcoming week.
+5. "Suggested Meal Blueprint for Next Week": A practical meal outline.
 
 Format the response in clean, beautiful Markdown with headers, bullet points, and bold text. Keep it empathetic, practical, and grounded.
       `;
@@ -531,16 +539,18 @@ Format the response in clean, beautiful Markdown with headers, bullet points, an
       const prompt = `
 You are an evidence-based clinical nutrition consultant reviewing a user's food log for the past ${data.periodDays} days:
 - Logged items: ${data.totalRecords}
-- Protein foods (${data.proteinCount}): ${data.proteinItems.join(', ')}
-- Carb foods (${data.carbCount}): ${data.carbItems.join(', ')}
-- Vegetables & greens: ${data.vegItems.join(', ')}
-- Packaged items: ${data.packagedCount}
+- Rice (Carbs): ${data.riceCount} (${data.riceItems.join(', ')})
+- Meat & Eggs (Protein): ${data.proteinCount} (${[...data.meatItems, ...data.eggItems].join(', ')})
+- Dairy: ${data.dairyCount}
+- Sweets & Desserts: ${data.sweetsCount}
+- Dining Source: ${data.homeMadeCount} Home Made, ${data.restaurantCount} Restaurant
 
 Provide:
 1. Weekly Intake Review
 2. Protein vs Carb Macro Analysis
-3. Targeted Recommendations for Next Week
-4. Meal Blueprint for the Upcoming Week
+3. Home Made vs Restaurant Assessment
+4. Targeted Recommendations for Next Week
+5. Meal Blueprint for the Upcoming Week
 
 Respond in Markdown with clear headers and bullet points.
       `;

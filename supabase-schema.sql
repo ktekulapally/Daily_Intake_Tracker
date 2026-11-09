@@ -8,17 +8,17 @@ create table if not exists intake_records (
   user_id uuid references auth.users not null default auth.uid(),
 
   intake_date date not null default current_date,
-  intake_time time not null default current_time,
-  meal_type text not null,              -- Breakfast / Mid-Morning Snack / Lunch / Evening Snack / Dinner
+  intake_time time not null default '12:00',
+  meal_type text not null,              -- Breakfast / Lunch / Snack / Dinner
   food_name text not null,
-  category text not null,               -- Rice/Grains, Dairy, Vegetables, ... (see app for full list)
+  category text not null,               -- Rice, Dairy, Eggs, Meat, Sweets/Desserts, Other
 
-  quantity numeric(10,2) not null check (quantity > 0),
-  unit text not null,                   -- Pieces, Bowl, Cup, g, ml, ...
+  quantity numeric(10,2) not null default 1 check (quantity > 0),
+  unit text not null default 'Serving', -- Kept for DB compatibility
 
-  ingredients text,
-  preparation_method text,
-  brand_restaurant text,
+  ingredients text default '',
+  preparation_method text default '',
+  brand_restaurant text default 'Home Made', -- Home Made vs. Restaurant
   notes text,
 
   is_packaged_food boolean not null default false,
